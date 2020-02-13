@@ -108,7 +108,7 @@ Python|setData|TestObject::setData
 2.3 Name of the variables
 ------
 Lanquage|Local(inside function/method)|Global(static)|inside class/structure
---- | --- | ---| ---| ---
+--- | --- | ---| ---
 C++|l_testVariable|s_testVariable|m_testVariable
 C|l_testVariable|s_testVariable|m_testVariable
 Python|l_testVariable|s_testVariable|m_testVariable
