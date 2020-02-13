@@ -160,5 +160,26 @@ operator uint8_t() {
 It should be used for all operators: if, if else, do while, for, operator, switch case ...
 >Note! Braces should start in the same line how  a operator  after one empty letter.
 
- 
- 
+3 Required tools and setup
+======
+
+3.1 sdk
+------
+Follow [this esp-open-rtos setup manual](https://github.com/SuperHouse/esp-open-rtos) for install all required tools
+
+3.2 Makefile recommendations
+------
+Set path to the common.mk file in the Makefile as this
+```include path/to/common.mk```
+
+For more info - visit [esp-open-rtos Build Process wiki page](https://github.com/SuperHouse/esp-open-rtos/wiki/Build-Process)
+
+4 Build and flash
+======
+
+To build firmware use the following command:
+`build`
+
+To flash firmware to the mk use the following command:
+
+`build flash`
