@@ -1,11 +1,9 @@
-#include <Wifi.h>
+#include "Wifi.h"
 
 #define SSID "Jesus"
 #define PWD "8715387153"
 
-
 bool s_isConnectionFault = false;
-
 
 void Wifi_connect() {
     sdk_wifi_set_opmode(STATION_MODE);
@@ -20,7 +18,7 @@ void Wifi_connect() {
 
 void onConnFault() {
     s_isConnectionFault = true;
-    printf("Connection aborted\n")
+    printf("Connection aborted\n");
 }
 
 void Wifi_checkConnection(stationStatus) {
@@ -50,20 +48,20 @@ void Wifi_checkConnection(stationStatus) {
     }
 }
 
-
 void Wifi_checkTask(void *parameters) {
     uint8_t l_stationStatus = sdk_wifi_station_get_connect_status();
     while (1) {
         if (!s_isConnectionFault) {
             l_stationStatus = sdk_wifi_station_get_connect_status();
             if (l_stationStatus != STATION_GOT_IP) {
-                checkConnectionWifi(l_stationStatus);
+                Wifi_checkConnection(l_stationStatus);
             }
         }
         vTaskDelay(10000 / portTICK_PERIOD_MS);
     }
 }
 
-void Wifi_init() { connect()
-        xTaskCreate(&Wifi_checkTask, "main-task", 1024, NULL, 10, NULL);
+void Wifi_init() {
+    Wifi_connect();
+    xTaskCreate(&Wifi_checkTask, "main-task", 1024, NULL, 10, NULL);
 }
