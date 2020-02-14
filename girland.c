@@ -22,7 +22,7 @@
 
 #include "dhcpserver.h"
 #include "ws2812_i2s/ws2812_i2s.h"
-
+#include <Wifi.h>
 
 // #include "spiffs.h"
 // #include "esp_spiffs.h"
@@ -71,7 +71,6 @@ bool rainbowAlign = IS_RAINBOW_HORISONTAL;
 int currentHue = 196;
 int currentTailHue = 16;
 int currentTailLength = 8;
-bool connectionFault = true;
 
 QueueHandle_t render_queue;
 
@@ -373,26 +372,26 @@ void timerINterruptHandler(void *arg) {
     xQueueSendFromISR(render_queue, &index, NULL);
 }
 
-void startAp() {
-    sdk_wifi_set_opmode(SOFTAP_MODE);
-    struct ip_info ap_ip;
-    IP4_ADDR(&ap_ip.ip, 192, 168, 0, 1);
-    IP4_ADDR(&ap_ip.gw, 0, 0, 0, 0);
-    IP4_ADDR(&ap_ip.netmask, 255, 255, 0, 0);
-    sdk_wifi_set_ip_info(1, &ap_ip);
+// void startAp() {
+//     sdk_wifi_set_opmode(SOFTAP_MODE);
+//     struct ip_info ap_ip;
+//     IP4_ADDR(&ap_ip.ip, 192, 168, 0, 1);
+//     IP4_ADDR(&ap_ip.gw, 0, 0, 0, 0);
+//     IP4_ADDR(&ap_ip.netmask, 255, 255, 0, 0);
+//     sdk_wifi_set_ip_info(1, &ap_ip);
 
-    struct sdk_softap_config ap_config = {
-        .ssid = "girland",
-        .ssid_hidden = 0,
-        .channel = 3,
-        .ssid_len = strlen("girland"),
-        .authmode = AUTH_WPA_WPA2_PSK,
-        .password = "12345678",
-        .max_connection = 3,
-        .beacon_interval = 100,
-    };
-    sdk_wifi_softap_set_config(&ap_config);
-}
+//     struct sdk_softap_config ap_config = {
+//         .ssid = "girland",
+//         .ssid_hidden = 0,
+//         .channel = 3,
+//         .ssid_len = strlen("girland"),
+//         .authmode = AUTH_WPA_WPA2_PSK,
+//         .password = "12345678",
+//         .max_connection = 3,
+//         .beacon_interval = 100,
+//     };
+//     sdk_wifi_softap_set_config(&ap_config);
+// }
 
 // void removeConfig() {
 //     printf("Remooving config");
@@ -405,7 +404,6 @@ void startAp() {
 //     removeConfig();
 //     sdk_system_restart();
 // }
-
 
 void getWifiStingsPage(char *buf) {
     const char *webpage =
@@ -627,8 +625,7 @@ void httpd_task(void *pvParameters) {
                                  currentHue, currentTailHue, currentTailLength);
                         netconn_write(client, buf, strlen(buf), NETCONN_COPY);
                     } else if (strlen(uri) < 3) {
-                        connectionFault ? getWifiStingsPage(&buf)
-                                        : getMainPage(&buf);
+                        getMainPage(&buf);
                         printf("Buffer: \n %s\n", buf);
                         netconn_write(client, buf, strlen(buf), NETCONN_COPY);
                     } else {
@@ -711,7 +708,8 @@ void user_init(void) {
     /* required to call wifi_set_opmode before station_set_config */
     render_queue = xQueueCreate(10, sizeof(int));
     // sdk_wifi_set_opmode(STATIONAP_MODE);
-    connect();
+
+    Wifi_init();
 
     // chaekSettings();
 
