@@ -174,6 +174,13 @@ Set path to the common.mk file in the Makefile as this
 
 For more info - visit [esp-open-rtos Build Process wiki page](https://github.com/SuperHouse/esp-open-rtos/wiki/Build-Process)
 
+3.3 Setup enviroment for Windows
+------
+path for toolchain:
+export PATH="$HOME/esp/xtensa-lx106-elf/bin/:$PATH"
+path for sdk :
+export IDF_PATH=~/esp/ESP8266_RTOS_SDK
+
 4 Build and flash
 ======
 
