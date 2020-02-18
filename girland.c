@@ -27,10 +27,10 @@
 // #include "spiffs.h"
 // #include "esp_spiffs.h"
 
-#define HEIGHT 9
-#define WIDTH 17
+#define HEIGHT 16
+#define WIDTH 16
 
-#define LED_NUMBER 153
+#define LED_NUMBER WIDTH * HEIGHT
 #define RENDER_FREQ 30
 
 #define SNOW_COLOR 0xB900FF
