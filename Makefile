@@ -4,7 +4,6 @@ PROGRAM=girland
 EXTRA_COMPONENTS = extras/i2s_dma extras/ws2812_i2s extras/dhcpserver extras/spiffs
 PROGRAM_SRC_DIR=. ./src
 PROGRAM_INC_DIR = ./inc
-PROGRAM_SRC_FILES=./girland.c
 FLASH_SIZE = 4
 
 
