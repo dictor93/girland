@@ -26,8 +26,8 @@ static void onConnFault() {
     printf("Connection aborted\n");
 }
 
-static void Wifi_checkConnection(stationStatus) {
-    switch (stationStatus) {
+static void Wifi_statusDecider(uint8_t status) {
+    switch (status) {
     case STATION_CONNECTING:
         printf(".");
         break;
@@ -47,7 +47,7 @@ static void Wifi_checkConnection(stationStatus) {
         printf("GOT IP\n");
         break;
     default:
-        printf("\nStatus undefined: %d\n", stationStatus);
+        printf("\nStatus undefined: %d\n", status);
         // sdk_system_restart();
         break;
     }
