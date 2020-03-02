@@ -10,7 +10,7 @@
 
 bool s_isConnectionFault = false;
 
-void Wifi_connect() {
+static void Wifi_connect() {
     sdk_wifi_set_opmode(STATION_MODE);
     sdk_wifi_station_set_auto_connect(1);
     struct sdk_station_config config = {
@@ -21,12 +21,12 @@ void Wifi_connect() {
     // printf("SSID: %s, PWD: %s", config.ssid, config.password);
 }
 
-void onConnFault() {
+static void onConnFault() {
     s_isConnectionFault = true;
     printf("Connection aborted\n");
 }
 
-void Wifi_checkConnection(stationStatus) {
+static void Wifi_checkConnection(stationStatus) {
     switch (stationStatus) {
     case STATION_CONNECTING:
         printf(".");
@@ -53,7 +53,7 @@ void Wifi_checkConnection(stationStatus) {
     }
 }
 
-void Wifi_checkTask(void *parameters) {
+static void Wifi_checkStatusTask(void *parameters) {
     uint8_t l_stationStatus = sdk_wifi_station_get_connect_status();
     while (1) {
         if (!s_isConnectionFault) {
