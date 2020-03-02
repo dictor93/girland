@@ -1,3 +1,8 @@
+#include "espressif/esp_common.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+
 #include "Wifi.h"
 
 #define SSID "Jesus"
