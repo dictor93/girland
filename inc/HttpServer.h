@@ -32,6 +32,12 @@ extern "C" {
 
 #define PAGE_BUFFER_LENGTH 3400
 
+enum Type {
+    kMode,
+    kDirection,
+    
+};
+
 struct parserData_t {
   int currentHue;
   int currentMode;
