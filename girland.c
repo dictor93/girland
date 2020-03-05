@@ -17,12 +17,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <lwip/api.h>
 #include <math.h>
 
-#include "dhcpserver.h"
-#include "ws2812_i2s/ws2812_i2s.h"
+#include "HttpServer.h"
 #include "Wifi.h"
+#include "ws2812_i2s/ws2812_i2s.h"
 
 // #include "spiffs.h"
 // #include "esp_spiffs.h"
@@ -30,19 +29,15 @@
 #define HEIGHT 16
 #define WIDTH 16
 
-#define LED_NUMBER WIDTH * HEIGHT
+#define LED_NUMBER WIDTH *HEIGHT
 #define RENDER_FREQ 30
 
 #define SNOW_COLOR 0xB900FF
 
 #define FORWARD true
 #define BACKWARD false
-#define FAST 10
-#define MIDDLE 5
-#define SLOW 2
 #define NOT_MIRROR false
 #define MIRROR true
-
 #define IS_RAINBOW_VERTICAL true
 #define IS_RAINBOW_HORISONTAL false
 
@@ -51,26 +46,16 @@
 #define SNOW_LIFE 30 * 2 // 5sec;
 #define SNOW_NUMBER 15
 
+#define FAST 10
+#define MIDDLE 5
+#define SLOW 2
 #define RAINBOW_MODE 0
 #define WAVE_MODE 1
 #define TAPES_MODE 2
 #define SNOW_MODE 3
 #define TORNADO_MODE 4
 #define DISABLE_MODE -1
-#define PAGE_BUFFER_LENGTH 3400
 
-int currentMode = RAINBOW_MODE;
-int currentSpeed = FAST;
-bool currentDirection = FORWARD;
-int currentSnowNumber = SNOW_NUMBER;
-int currentSnowLife = SNOW_LIFE;
-uint32_t currentColor = SNOW_COLOR;
-bool currentMirror = NOT_MIRROR;
-int currentTornadoTailLength = TORNADO_TAIL_LENGTH;
-bool rainbowAlign = IS_RAINBOW_HORISONTAL;
-int currentHue = 196;
-int currentTailHue = 16;
-int currentTailLength = 8;
 
 QueueHandle_t render_queue;
 
@@ -182,7 +167,7 @@ void generateRainbow(int frame, ws2812_pixel_t *pixels, bool vertical,
 }
 
 void generateWave(int frame, ws2812_pixel_t *pixels, bool direction, int speed,
-                  bool mirror) {
+                  bool mirror, int hue) {
     for (int x = 0; x < WIDTH; x++) {
         int locX = mirror ? x : WIDTH - x - 1;
         for (int y = 0; y < HEIGHT; y++) {
@@ -191,7 +176,7 @@ void generateWave(int frame, ws2812_pixel_t *pixels, bool direction, int speed,
             if (((y + frame / (11 - speed)) % HEIGHT >= (x / 3 + 3)) &&
                 ((y + frame / (11 - speed)) % HEIGHT < (x / 3 + 6))) {
                 hsv data;
-                data.h = currentHue;
+                data.h = hue;
                 data.s = 1;
                 data.v = 1;
                 pixels[locX * HEIGHT + locY] = hsv2rgb(data);
@@ -202,7 +187,7 @@ void generateWave(int frame, ws2812_pixel_t *pixels, bool direction, int speed,
     }
 }
 
-void generateTapes(int frame, ws2812_pixel_t *pixels, int speed) {
+void generateTapes(int frame, ws2812_pixel_t *pixels, int speed, int hue) {
     for (int x = 0; x < WIDTH; x++) {
         // int locX = mirror ? x : WIDTH - x - 1;
         for (int y = 0; y < HEIGHT; y++) {
@@ -211,7 +196,7 @@ void generateTapes(int frame, ws2812_pixel_t *pixels, int speed) {
             if (y == (int)(x / 3 + 1 + frame / (12 - speed)) % HEIGHT ||
                 y == (int)(HEIGHT - x / 3 + frame / (12 - speed)) % HEIGHT) {
                 hsv data;
-                data.h = currentHue;
+                data.h = hue;
                 data.s = 1;
                 data.v = 1;
                 pixels[x * HEIGHT + locY] = hsv2rgb(data);
@@ -225,7 +210,7 @@ void generateTapes(int frame, ws2812_pixel_t *pixels, int speed) {
 snow_item snowArr[SNOW_NUMBER];
 bool vacantPos[SNOW_NUMBER] = {true, true, true, true, true, true, true};
 uint32_t max = 0;
-void generateSnow(ws2812_pixel_t *pixels) {
+void generateSnow(ws2812_pixel_t *pixels, int hue) {
     printf("RND: %d\n", max);
     int vacance = -1;
 
@@ -266,7 +251,7 @@ void generateSnow(ws2812_pixel_t *pixels) {
                 data.v = (maxAge - age) / deca;
             else
                 data.v = (float)age / maxValueAge;
-            data.h = currentHue;
+            data.h = hue;
             data.s = 1;
             pixels[snowArr[i].x * HEIGHT + snowArr[i].y] = hsv2rgb(data);
             if (age <= 0)
@@ -277,7 +262,7 @@ void generateSnow(ws2812_pixel_t *pixels) {
     }
 }
 
-void generateTornado(int frame, ws2812_pixel_t *pixels) {
+void generateTornado(int frame, ws2812_pixel_t *pixels, int tailHue, int tailLength, int hue) {
     for (int x = 0; x < WIDTH; x++) {
         for (int y = 0; y < HEIGHT; y++) {
             pixels[x * HEIGHT + y] = hexToRGB(0x000000);
@@ -288,7 +273,7 @@ void generateTornado(int frame, ws2812_pixel_t *pixels) {
     int currentY = (int)currentPos / WIDTH;
     if (currentX % 2)
         currentY = HEIGHT - currentY - 1;
-    for (int i = 0; i < currentTailLength; i++) {
+    for (int i = 0; i < tailLength; i++) {
         int tailPos = currentPos - 1 - i;
         if (tailPos < 0)
             tailPos = LED_NUMBER + tailPos;
@@ -298,7 +283,7 @@ void generateTornado(int frame, ws2812_pixel_t *pixels) {
             tailY = HEIGHT - tailY - 1;
         int currTailPos = (tailX * HEIGHT + tailY) % LED_NUMBER;
         hsv data;
-        data.h = currentTailHue;
+        data.h = tailHue;
         data.s = 1;
         data.v = (float)1 / (i * i * 0.5 + 1);
         pixels[currTailPos] = hsv2rgb(data);
@@ -306,7 +291,7 @@ void generateTornado(int frame, ws2812_pixel_t *pixels) {
     hsv data;
     data.s = 1;
     data.v = 1;
-    data.h = currentHue;
+    data.h = hue;
     pixels[currentX * HEIGHT + currentY] = hsv2rgb(data);
 }
 
@@ -319,30 +304,44 @@ void shutdown(ws2812_pixel_t *pixels) {
 }
 
 void render(int frame, ws2812_pixel_t *pixels) {
-    switch (currentMode) {
+
+    struct parserData_t *params = HttpServer_getCurrentParams();
+
+    int hue = params->currentHue;
+    int mode = params->currentMode;
+    int speed = params->currentSpeed;
+    int tailHue = params->currentTailHue;
+    int snowLife = params->currentSnowLife;
+    int snowNumber = params->currentSnowNumber;
+    int tailLength = params->currentTailLength;
+    bool rainbowAlign = params->rainbowAlign;
+    bool currentMirror = params->currentMirror;
+    bool direction = params->currentDirection;
+
+    switch (mode) {
     case RAINBOW_MODE:
-        generateRainbow(frame, pixels, rainbowAlign, currentSpeed,
-                        currentDirection);
+        generateRainbow(frame, pixels, rainbowAlign, speed,
+                        direction);
         break;
     case WAVE_MODE:
-        generateWave(frame, pixels, currentDirection, currentSpeed,
-                     currentMirror);
+        generateWave(frame, pixels, direction, speed,
+                     currentMirror, hue);
         break;
     case TAPES_MODE:
-        generateTapes(frame, pixels, currentSpeed);
+        generateTapes(frame, pixels, speed, hue);
         break;
     case SNOW_MODE:
-        generateSnow(pixels);
+        generateSnow(pixels, hue);
         break;
     case TORNADO_MODE:
-        generateTornado(frame, pixels);
+        generateTornado(frame, pixels, tailHue, tailLength, hue);
         break;
     case DISABLE_MODE:
         shutdown(pixels);
         break;
     default:
-        generateRainbow(frame, pixels, rainbowAlign, currentSpeed,
-                        currentDirection);
+        generateRainbow(frame, pixels, rainbowAlign, speed,
+                        direction);
         break;
     }
 }
@@ -405,80 +404,6 @@ void timerINterruptHandler(void *arg) {
 //     sdk_system_restart();
 // }
 
-void getWifiStingsPage(char *buf) {
-    const char *webpage =
-        "<html><head><style></style></head><body><div class=\"root\"><form "
-        "method=\"post\" id=\"settings\"><div><label>SSID<input type=\"text\" "
-        "name=\"SSID\" "
-        "placeholder=\"SSID\"></label></div><div><label>PASSWORD<input "
-        "type=\"text\"nname=\"PWD\" "
-        "placeholder=\"PASSWORD\"></label></div><button>Send</button></form></"
-        "div></body><script>const "
-        "form=document.getElementById('settings');form.addEventListener('"
-        "submit',(e)=>{e.preventDefault();fetch(`/wifiset/"
-        "${e.target[0].value},${e.target[1].value}`);});</script></html>";
-    snprintf(buf, PAGE_BUFFER_LENGTH, webpage);
-}
-
-void getMainPage(char *buf) {
-    const char *webpage =
-        "<html><head> <title>HTTP Server</title> <style> div.main { "
-        "font-family: Arial; padding: 0.01em 16px; box-shadow: 2px 2px 1px 1px "
-        "#d2d2d2; background-color: #f1f1f1; } #controls>div { padding: 10px; "
-        "border-bottom: 1px solid rgba(0, 0, 0, 0.3); } @media screen and "
-        "(max-device-width: 500px) { html { font-size: 50px; } html button { "
-        "font-size: 50px; width: 400px; /* height: 60px; */ } } "
-        "input[type=\"button\"]{ color: #fff; background-color: #007bff; "
-        "border-color: #007bff; font-weight: 400; text-align: center; border: "
-        "1px solid transparent; padding: .375rem .75rem; margin:7px 12px 5px; "
-        "font-size: 1rem; line-height: 1.5; border-radius: .25rem; transition: "
-        "color .15s ease-in-out, background-color .15s "
-        "ease-in-out,border-color .15s ease-in-out,box-shadow .15s "
-        "ease-in-out; } input[type=\"button\"]:hover{background-color: "
-        "#0069d9;border-color: #0062cc;} "
-        "input[type=\"button\"]:active{background-color: #0062cc;border-color: "
-        "#005cbf;} input[type=\"button\"]:focus{background-color: "
-        "#0069d9;border-color: #0062cc;box-shadow: 0 0 0 0.2rem "
-        "rgba(38,143,255,.5)} </style></head><body> <div class='main'> "
-        "<h3>Garland Control</h3> <p>Free heap: <span id='heap'></span></p> "
-        "<div id='controls'> </div> </div></body><script> const g = [ { a: "
-        "['all'], n: 'Mode set', p: '/mode', c: [ { n: 'RAINBOW', t: 'button', "
-        "}, { n: 'WAVE', t: 'button', }, { n: 'TAPES', t: 'button', }, { n: "
-        "'SNOW', t: 'button', }, { n: 'TORNADO', t: 'button', }, { n: "
-        "'DISABLE', t: 'button', } ] }, { a: [0, 1], n: 'Direction set', p: "
-        "'/dir', c: [ { n: 'FORWARD', t: 'button', }, { n: 'BACKWARD', t: "
-        "'button', }, ] }, { a: [0, 1, 2], n: 'Speed set', p: '/speed', c: [ { "
-        "n: 'FAST', t: 'button', }, { n: 'MIDDLE', t: 'button', }, { n: "
-        "'SLOW', t: 'button', }, ] }, { a: [0], n: 'Align set', p: '/align', "
-        "c: [ { n: 'VERTICAL', t: 'button', }, { n: 'HORISONTAL', t: 'button', "
-        "} ] }, { a: [1], n: 'Mirror set', p: '/mirror', c: [ { n: 'MIRROR', "
-        "t: 'button', }, { n: 'NOT_MIRROR', t: 'button', } ] }, { a: "
-        "[1,2,3,4], n: 'Main color set', p: '/maincolor', c: [ { n: "
-        "'MAIN_COLOR', t: 'range', f: 'ch', min: 0, max: 360, }, ] }, { a: "
-        "[4], n: 'Tail set', p: '/tail', c: [ { n: 'COLOR', t: 'range', f: "
-        "'th', min: 0, max:360, }, { n: 'LENGTH', t: 'range', f: 'tl', min: 0, "
-        "max: 100, }, ] }, ]; function s(p) { fetch(p).then(r => "
-        "r.json().then(render)); }; function render(state) { "
-        "console.log(state); "
-        "document.getElementById('heap').innerText=state.fh; const root = "
-        "document.getElementById('controls'); root.innerHTML = ''; "
-        "g.forEach((cg => { if (cg.a.includes(state.m) || "
-        "cg.a.includes('all')) { const gn = document.createElement('div'); "
-        "gn.innerHTML = `<span>${cg.n}: </span><br/>`; cg.c.forEach(c=>{ const "
-        "e = document.createElement('input'); e.setAttribute('type', c.t); "
-        "if(c.t==='button') { e.addEventListener('click', "
-        "()=>s(`${cg.p}/${c.n}`)); gn.appendChild(e); e.setAttribute('value', "
-        "c.n); } else if(c.t==='range') { const cr = "
-        "document.createElement('div'); cr.appendChild(e); cr.innerText=c.n; "
-        "gn.appendChild(cr); e.setAttribute('min', c.min); "
-        "e.setAttribute('max', c.max); e.value = state[c.f]; "
-        "e.addEventListener('input', "
-        "(e)=>s(`${cg.p}/${c.n}/${String(e.target.value).padStart(3,0)}`)); } "
-        "gn.appendChild(e); }); root.appendChild(gn); } })); }; "
-        "s('/status');</script></html>";
-    snprintf(buf, PAGE_BUFFER_LENGTH, webpage);
-}
-
 // void saveAuthData(char*ssid, char*pwd) {
 //     char *ssidbuf = ssid;
 //     char *pwdbuf = pwd;
@@ -503,149 +428,6 @@ void getMainPage(char *buf) {
 
 //     close(fd);
 // }
-
-void httpd_task(void *pvParameters) {
-    ip_addr_t first_client_ip;
-    IP4_ADDR(&first_client_ip, 192, 168, 0, 2);
-    dhcpserver_start(&first_client_ip, 4);
-
-    struct netconn *client = NULL;
-    struct netconn *nc = netconn_new(NETCONN_TCP);
-    if (nc == NULL) {
-        printf("Failed to allocate socket.\n");
-        vTaskDelete(NULL);
-    }
-    netconn_bind(nc, IP_ADDR_ANY, 80);
-    netconn_listen(nc);
-    char buf[PAGE_BUFFER_LENGTH];
-
-    while (1) {
-        err_t err = netconn_accept(nc, &client);
-        if (err == ERR_OK) {
-            struct netbuf *nb;
-            if ((err = netconn_recv(client, &nb)) == ERR_OK) {
-                void *data;
-                char *subBuff;
-                subBuff = malloc(4);
-                u16_t len;
-                netbuf_data(nb, &data, &len);
-                /* check for a GET request */
-                if (!strncmp(data, "GET ", 4)) {
-                    char uri[32];
-                    const int max_uri_len = 32;
-                    char *sp1, *sp2;
-                    /* extract URI */
-                    sp1 = data + 5;
-                    sp2 = memchr(sp1, ' ', max_uri_len);
-                    int len = sp2 - sp1;
-                    memcpy(uri, sp1, len);
-                    uri[len] = '\0';
-                    printf("uri: %s\n", uri);
-
-                    if (strstr(uri, "mode")) {
-                        if (strstr(uri, "RAINBOW")) {
-                            currentMode = RAINBOW_MODE;
-                        } else if (strstr(uri, "WAVE")) {
-                            currentMode = WAVE_MODE;
-                        } else if (strstr(uri, "TAPES")) {
-                            currentMode = TAPES_MODE;
-                        } else if (strstr(uri, "SNOW")) {
-                            currentMode = SNOW_MODE;
-                        } else if (strstr(uri, "TORNADO")) {
-                            currentMode = TORNADO_MODE;
-                        } else if (strstr(uri, "DISABLE")) {
-                            currentMode = DISABLE_MODE;
-                        }
-                    } else if (strstr(uri, "dir")) {
-                        if (strstr(uri, "FORWARD")) {
-                            currentDirection = FORWARD;
-                        } else if (strstr(uri, "BACKWARD")) {
-                            currentDirection = BACKWARD;
-                        }
-                    } else if (strstr(uri, "speed")) {
-                        if (strstr(uri, "FAST")) {
-                            currentSpeed = FAST;
-                        } else if (strstr(uri, "MIDDLE")) {
-                            currentSpeed = MIDDLE;
-                        } else if (strstr(uri, "SLOW")) {
-                            currentSpeed = SLOW;
-                        }
-                    } else if (strstr(uri, "mirror")) {
-                        if (strstr(uri, "NOT_MIRROR")) {
-                            currentMirror = NOT_MIRROR;
-                        } else if (strstr(uri, "MIRROR")) {
-                            currentMirror = MIRROR;
-                        }
-                    } else if (strstr(uri, "align")) {
-                        if (strstr(uri, "VERTICAL")) {
-                            rainbowAlign = IS_RAINBOW_VERTICAL;
-                        } else if (strstr(uri, "HORISONTAL")) {
-                            rainbowAlign = IS_RAINBOW_HORISONTAL;
-                        }
-                    } else if (strstr(uri, "maincolor")) {
-                        int colorStart = memchr(uri + 12, '/', max_uri_len) + 1;
-                        memcpy(subBuff, colorStart, 3);
-                        subBuff[3] = '\0';
-                        sscanf(subBuff, "%d", &currentHue);
-                    } else if (strstr(uri, "tail")) {
-                        if (strstr(uri, "COLOR")) {
-                            int colorStart =
-                                memchr(uri + 8, '/', max_uri_len) + 1;
-                            memcpy(subBuff, colorStart, 3);
-                            subBuff[3] = '\0';
-                            sscanf(subBuff, "%d", &currentTailHue);
-                        } else if (strstr(uri, "LENGTH")) {
-                            int colorStart =
-                                memchr(uri + 8, '/', max_uri_len) + 1;
-                            memcpy(subBuff, colorStart, 3);
-                            subBuff[3] = '\0';
-                            sscanf(subBuff, "%d", &currentTailLength);
-                        }
-                        // } else if (strstr(uri, "wifiset")) {
-                        //     char * param1Addr = memchr(uri+5, '/', 32) + 1;
-                        //     char * dividerAddr = memchr(uri+5, ',', 32);
-                        //     char * end = memchr(uri+5, '\0', 32)+1;
-                        //     char SSID[32];
-                        //     char PWD[32];
-                        //     memcpy(SSID, param1Addr, dividerAddr-param1Addr);
-                        //     SSID[dividerAddr-param1Addr] = '\0';
-                        //     memcpy(PWD, dividerAddr + 1, end -
-                        //     dividerAddr-1); PWD[end - dividerAddr-1] = '\0';
-                        //     saveAuthData(SSID, PWD);
-                        //     vTaskDelay(500);
-                        //     getAuthData();
-                        //     // sdk_system_restart();
-                    }
-
-                    if (strstr(uri, "status")) {
-                        snprintf(buf, sizeof(buf),
-                                 "{\"m\":%d,\"fh\":%d,\"ch\":%d,\"th\":%d,"
-                                 "\"tl\":%d}",
-                                 currentMode, (int)xPortGetFreeHeapSize(),
-                                 currentHue, currentTailHue, currentTailLength);
-                        netconn_write(client, buf, strlen(buf), NETCONN_COPY);
-                    } else if (strlen(uri) < 3) {
-                        getMainPage(&buf);
-                        printf("Buffer: \n %s\n", buf);
-                        netconn_write(client, buf, strlen(buf), NETCONN_COPY);
-                    } else {
-                        snprintf(buf, sizeof(buf),
-                                 "{\"m\":%d,\"fh\":%d,\"ch\":%d,\"th\":%d,"
-                                 "\"tl\":%d}",
-                                 currentMode, (int)xPortGetFreeHeapSize(),
-                                 currentHue, currentTailHue, currentTailLength);
-                        netconn_write(client, buf, strlen(buf), NETCONN_COPY);
-                    }
-                }
-                free(subBuff);
-            }
-            netbuf_delete(nb);
-        }
-        printf("Closing connection\n");
-        netconn_close(client);
-        netconn_delete(client);
-    }
-}
 
 // bool getAuthData() {
 //     int fileLength = 0xF;
@@ -710,7 +492,7 @@ void user_init(void) {
     // sdk_wifi_set_opmode(STATIONAP_MODE);
 
     Wifi_init();
-
+    HttpServer_init();
     // chaekSettings();
 
     timer_set_interrupts(FRC1, false);
@@ -721,5 +503,4 @@ void user_init(void) {
     timer_set_run(FRC1, true);
 
     xTaskCreate(&renderTask, "ws2812_i2s", 2048, NULL, 10, NULL);
-    xTaskCreate(&httpd_task, 'HTTP_DEAMON', 4096, NULL, 2, NULL);
 }
