@@ -59,7 +59,7 @@ static void Wifi_checkStatusTask(void *parameters) {
         if (!s_isConnectionFault) {
             l_stationStatus = sdk_wifi_station_get_connect_status();
             if (l_stationStatus != STATION_GOT_IP) {
-                Wifi_checkConnection(l_stationStatus);
+                Wifi_statusDecider(l_stationStatus);
             }
         }
         vTaskDelay(10000 / portTICK_PERIOD_MS);
@@ -68,5 +68,5 @@ static void Wifi_checkStatusTask(void *parameters) {
 
 void Wifi_init() {
     Wifi_connect();
-    xTaskCreate(&Wifi_checkTask, "main-task", 1024, NULL, 10, NULL);
+    xTaskCreate(&Wifi_checkStatusTask, "main-task", 1024, NULL, 10, NULL);
 }
