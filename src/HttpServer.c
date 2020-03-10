@@ -2,15 +2,14 @@
 #include "espressif/esp_common.h"
 #include "queue.h"
 #include "task.h"
-#include "dhcpserver.h"
 #include <lwip/api.h>
+#include "dhcpserver.h"
 
 #include "HttpServer.h"
 
-
 struct parserData_t s_currentData;
 
-struct parserData_t * HttpServer_getCurrentParams() {
+struct parserData_t *HttpServer_getCurrentParams() {
     return &s_currentData;
 }
 
@@ -88,7 +87,7 @@ static void HttpServer_getMainPage(char *buf) {
     snprintf(buf, PAGE_BUFFER_LENGTH, webpage);
 }
 
-static void Config_setMode(uri) {
+static void Config_setMode(char *uri) {
     if (strstr(uri, "RAINBOW")) {
         s_currentData.currentMode = RAINBOW_MODE;
     } else if (strstr(uri, "WAVE")) {
@@ -103,27 +102,116 @@ static void Config_setMode(uri) {
         s_currentData.currentMode = DISABLE_MODE;
     }
 }
-enum Type Config_getType(uri) {
-    Type l_returnType;
+
+static void Config_setDirection(char *uri) {
+    if (strstr(uri, "FORWARD")) {
+        s_currentData.currentDirection = FORWARD;
+    } else if (strstr(uri, "BACKWARD")) {
+        s_currentData.currentDirection = BACKWARD;
+    }
+}
+
+static void Config_setSpeed(char *uri) {
+    if (strstr(uri, "FAST")) {
+        s_currentData.currentSpeed = FAST;
+    } else if (strstr(uri, "MIDDLE")) {
+        s_currentData.currentSpeed = MIDDLE;
+    } else if (strstr(uri, "SLOW")) {
+        s_currentData.currentSpeed = SLOW;
+    }
+}
+
+static void Config_setMirror(char *uri) {
+    if (strstr(uri, "NOT_MIRROR")) {
+        s_currentData.currentMirror = NOT_MIRROR;
+    } else if (strstr(uri, "MIRROR")) {
+        s_currentData.currentMirror = MIRROR;
+    }
+}
+
+static void Config_setAlign(char *uri) {
+    if (strstr(uri, "VERTICAL")) {
+        s_currentData.rainbowAlign = IS_RAINBOW_VERTICAL;
+    } else if (strstr(uri, "HORISONTAL")) {
+        s_currentData.rainbowAlign = IS_RAINBOW_HORISONTAL;
+    }
+}
+
+static void Config_setMainColor(char *uri) {
+    char subBuff[4];
+    int colorStart = memchr(uri + 12, '/', MAX_URI_LEN) + 1;
+    memcpy(subBuff, colorStart, 3);
+    subBuff[3] = '\0';
+    sscanf(subBuff, "%d", &s_currentData.currentHue);
+}
+
+static void Config_setTail(char *uri) {
+    char subBuff[4];
+    if (strstr(uri, "COLOR")) {
+        int colorStart = memchr(uri + 8, '/', MAX_URI_LEN) + 1;
+        memcpy(subBuff, colorStart, 3);
+        subBuff[3] = '\0';
+        sscanf(subBuff, "%d", &s_currentData.currentTailHue);
+    } else if (strstr(uri, "LENGTH")) {
+        int colorStart = memchr(uri + 8, '/', MAX_URI_LEN) + 1;
+        memcpy(subBuff, colorStart, 3);
+        subBuff[3] = '\0';
+        sscanf(subBuff, "%d", &s_currentData.currentTailLength);
+    }
+}
+
+static enum ActionType Config_getType(char *uri) {
+    enum ActionType l_returnType;
     if (strstr(uri, "mode")) {
         l_returnType = kMode;
-    } else if (strstr(uri, "dir") {
+    } else if (strstr(uri, "dir")) {
         l_returnType = kDirection;
+    } else if (strstr(uri, "speed")) {
+        l_returnType = kSpeed;
+    } else if (strstr(uri, "mirror")) {
+        l_returnType = kMirror;
+    } else if (strstr(uri, "align")) {
+        l_returnType = kAlign;
+    } else if (strstr(uri, "maincolor")) {
+        l_returnType = kMainColor;
+    } else if (strstr(uri, "tail")) {
+        l_returnType = kTail;
+    } else if (strlen(uri) < 3) {
+        l_returnType = kRoot;
     }
     return l_returnType;
 }
 
-static void Config_parceUri(char *uri) {
-    // получаем тип и в зависимости от него закидываем в соответсвующу функцию которая уже и устанавливает наш конфиг
-    Type l_type = Config_getType(uri);
+static enum ActionType Config_parceUri(char *uri) {
+    // получаем тип и в зависимости от него закидываем в соответсвующу функцию
+    // которая уже и устанавливает наш конфиг
+    enum ActionType l_type = Config_getType(uri);
     switch (l_type) {
     case kMode:
         Config_setMode(uri);
         break;
-    
+    case kDirection:
+        Config_setDirection(uri);
+        break;
+    case kSpeed:
+        Config_setSpeed(uri);
+        break;
+    case kMirror:
+        Config_setMirror(uri);
+        break;
+    case kAlign:
+        Config_setAlign(uri);
+        break;
+    case kMainColor:
+        Config_setMainColor(uri);
+        break;
+    case kTail:
+        Config_setTail(uri);
+        break;
     default:
         break;
     }
+    return l_type;
 }
 
 static void HttpServer_httpd_task(void *pvParameters) {
@@ -147,132 +235,51 @@ static void HttpServer_httpd_task(void *pvParameters) {
             struct netbuf *nb;
             if ((err = netconn_recv(client, &nb)) == ERR_OK) {
                 void *data;
-                char *subBuff;
-                subBuff = malloc(4);
                 u16_t len;
                 netbuf_data(nb, &data, &len);
                 /* check for a GET request */
                 if (!strncmp(data, "GET ", 4)) {
                     char uri[32];
-                    const int max_uri_len = 32;
-                    char *sp1, *sp2;
+                    char *uriStart, *uriEnd;
                     /* extract URI */
-                    sp1 = data + 5;
-                    sp2 = memchr(sp1, ' ', max_uri_len);
-                    int len = sp2 - sp1;
-                    memcpy(uri, sp1, len);
+                    uriStart = data + 5;
+                    uriEnd = memchr(uriStart, ' ', MAX_URI_LEN);
+                    int len = uriEnd - uriStart;
+                    memcpy(uri, uriStart, len);
                     uri[len] = '\0';
                     printf("uri: %s\n", uri);
                     // закидываем uri в парсер
-                    Config_parceUri(char *uri);
-                    /*
-                    if (strstr(uri, "mode")) {
-                        if (strstr(uri, "RAINBOW")) {
-                            s_currentData.currentMode = RAINBOW_MODE;
-                        } else if (strstr(uri, "WAVE")) {
-                            s_currentData.currentMode = WAVE_MODE;
-                        } else if (strstr(uri, "TAPES")) {
-                            s_currentData.currentMode = TAPES_MODE;
-                        } else if (strstr(uri, "SNOW")) {
-                            s_currentData.currentMode = SNOW_MODE;
-                        } else if (strstr(uri, "TORNADO")) {
-                            s_currentData.currentMode = TORNADO_MODE;
-                        } else if (strstr(uri, "DISABLE")) {
-                            s_currentData.currentMode = DISABLE_MODE;
-                        }
-                    } else if (strstr(uri, "dir")) {
-                        if (strstr(uri, "FORWARD")) {
-                            s_currentData.currentDirection = FORWARD;
-                        } else if (strstr(uri, "BACKWARD")) {
-                            s_currentData.currentDirection = BACKWARD;
-                        }
-                    } else if (strstr(uri, "speed")) {
-                        if (strstr(uri, "FAST")) {
-                            s_currentData.currentSpeed = FAST;
-                        } else if (strstr(uri, "MIDDLE")) {
-                            s_currentData.currentSpeed = MIDDLE;
-                        } else if (strstr(uri, "SLOW")) {
-                            s_currentData.currentSpeed = SLOW;
-                        }
-                    } else if (strstr(uri, "mirror")) {
-                        if (strstr(uri, "NOT_MIRROR")) {
-                            s_currentData.currentMirror = NOT_MIRROR;
-                        } else if (strstr(uri, "MIRROR")) {
-                            s_currentData.currentMirror = MIRROR;
-                        }
-                    } else if (strstr(uri, "align")) {
-                        if (strstr(uri, "VERTICAL")) {
-                            s_currentData.rainbowAlign = IS_RAINBOW_VERTICAL;
-                        } else if (strstr(uri, "HORISONTAL")) {
-                            s_currentData.rainbowAlign = IS_RAINBOW_HORISONTAL;
-                        }
-                    } else if (strstr(uri, "maincolor")) {
-                        int colorStart = memchr(uri + 12, '/', max_uri_len) + 1;
-                        memcpy(subBuff, colorStart, 3);
-                        subBuff[3] = '\0';
-                        sscanf(subBuff, "%d", &s_currentData.currentHue);
-                    } else if (strstr(uri, "tail")) {
-                        if (strstr(uri, "COLOR")) {
-                            int colorStart =
-                                memchr(uri + 8, '/', max_uri_len) + 1;
-                            memcpy(subBuff, colorStart, 3);
-                            subBuff[3] = '\0';
-                            sscanf(subBuff, "%d", &s_currentData.currentTailHue);
-                        } else if (strstr(uri, "LENGTH")) {
-                            int colorStart =
-                                memchr(uri + 8, '/', max_uri_len) + 1;
-                            memcpy(subBuff, colorStart, 3);
-                            subBuff[3] = '\0';
-                            sscanf(subBuff, "%d", &s_currentData.currentTailLength);
-                        }
-                        // } else if (strstr(uri, "wifiset")) {
-                        //     char * param1Addr = memchr(uri+5, '/', 32) + 1;
-                        //     char * dividerAddr = memchr(uri+5, ',', 32);
-                        //     char * end = memchr(uri+5, '\0', 32)+1;
-                        //     char SSID[32];
-                        //     char PWD[32];
-                        //     memcpy(SSID, param1Addr, dividerAddr-param1Addr);
-                        //     SSID[dividerAddr-param1Addr] = '\0';
-                        //     memcpy(PWD, dividerAddr + 1, end -
-                        //     dividerAddr-1); PWD[end - dividerAddr-1] = '\0';
-                        //     saveAuthData(SSID, PWD);
-                        //     vTaskDelay(500);
-                        //     getAuthData();
-                        //     // sdk_system_restart();
-                    }
-
-                    if (strstr(uri, "status")) {
-                        snprintf(buf, sizeof(buf),
-                                 "{\"m\":%d,\"fh\":%d,\"ch\":%d,\"th\":%d,"
-                                 "\"tl\":%d}",
-                                 s_currentData.currentMode, (int)xPortGetFreeHeapSize(),
-                                 s_currentData.currentHue, s_currentData.currentTailHue, s_currentData.currentTailLength);
-                        netconn_write(client, buf, strlen(buf), NETCONN_COPY);
-                    } else if (strlen(uri) < 3) {
+                    enum ActionType l_type = Config_parceUri(uri);
+                    switch (l_type) {
+                    case kRoot:
                         HttpServer_getMainPage(&buf);
                         printf("Buffer: \n %s\n", buf);
                         netconn_write(client, buf, strlen(buf), NETCONN_COPY);
-                    } else {
+                        break;
+                    default:
                         snprintf(buf, sizeof(buf),
                                  "{\"m\":%d,\"fh\":%d,\"ch\":%d,\"th\":%d,"
                                  "\"tl\":%d}",
-                                 s_currentData.currentMode, (int)xPortGetFreeHeapSize(),
-                                 s_currentData.currentHue, s_currentData.currentTailHue, s_currentData.currentTailLength);
+                                 s_currentData.currentMode,
+                                 (int)xPortGetFreeHeapSize(),
+                                 s_currentData.currentHue,
+                                 s_currentData.currentTailHue,
+                                 s_currentData.currentTailLength);
                         netconn_write(client, buf, strlen(buf), NETCONN_COPY);
+                        break;
                     }
                 }
-                free(subBuff); */
+                netbuf_delete(nb);
             }
-            netbuf_delete(nb);
+            printf("Closing connection\n");
+            netconn_close(client);
+            netconn_delete(client);
         }
-        printf("Closing connection\n");
-        netconn_close(client);
-        netconn_delete(client);
     }
 }
 
 void HttpServer_init() {
-    
+
     s_currentData.currentHue = 196;
     s_currentData.currentMode = RAINBOW_MODE;
     s_currentData.currentSnowLife = DEFAULT_SNOW_LIFE;
@@ -284,5 +291,5 @@ void HttpServer_init() {
     s_currentData.currentMirror = NOT_MIRROR;
     s_currentData.rainbowAlign = IS_RAINBOW_VERTICAL;
 
-    xTaskCreate(&HttpServer_httpd_task, 'HTTP_DEAMON', 4096, NULL, 2, NULL);
+    xTaskCreate(&HttpServer_httpd_task, "HTTP_DEAMON", 4096, NULL, 2, NULL);
 }
