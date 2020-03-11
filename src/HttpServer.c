@@ -4,7 +4,7 @@
 #include "task.h"
 #include <lwip/api.h>
 #include "dhcpserver.h"
-
+#include "string.h"
 #include "HttpServer.h"
 
 struct parserData_t s_currentData;
@@ -139,8 +139,10 @@ static void Config_setAlign(char *uri) {
 
 static void Config_setMainColor(char *uri) {
     char subBuff[4];
-    int colorStart = memchr(uri + 12, '/', MAX_URI_LEN) + 1;
-    memcpy(subBuff, colorStart, 3);
+    char *l_colorBuf = (char *) memchr(uri + 12, '/', MAX_URI_LEN) + 1;
+    int colorStart = (uri - l_colorBuf + 1) + 1; 
+    //memcpy(subBuff, colorStart, 3);
+    sprintf (subBuff, "%d", colorStart);
     subBuff[3] = '\0';
     sscanf(subBuff, "%d", &s_currentData.currentHue);
 }
@@ -148,13 +150,17 @@ static void Config_setMainColor(char *uri) {
 static void Config_setTail(char *uri) {
     char subBuff[4];
     if (strstr(uri, "COLOR")) {
-        int colorStart = memchr(uri + 8, '/', MAX_URI_LEN) + 1;
-        memcpy(subBuff, colorStart, 3);
+        char *l_colorBuf = (char *) memchr(uri + 8, '/', MAX_URI_LEN) + 1;
+        int colorStart = (uri - l_colorBuf + 1) + 1;
+        //memcpy(subBuff, colorStart, 3);
+        sprintf (subBuff, "%d", colorStart);
         subBuff[3] = '\0';
         sscanf(subBuff, "%d", &s_currentData.currentTailHue);
     } else if (strstr(uri, "LENGTH")) {
-        int colorStart = memchr(uri + 8, '/', MAX_URI_LEN) + 1;
-        memcpy(subBuff, colorStart, 3);
+        char *l_colorBuf = (char *) memchr(uri + 8, '/', MAX_URI_LEN) + 1;
+        int colorStart = (uri - l_colorBuf + 1) + 1;
+        //memcpy(subBuff, colorStart, 3);
+        sprintf (subBuff, "%d", colorStart);
         subBuff[3] = '\0';
         sscanf(subBuff, "%d", &s_currentData.currentTailLength);
     }
@@ -227,7 +233,7 @@ static void HttpServer_httpd_task(void *pvParameters) {
     }
     netconn_bind(nc, IP_ADDR_ANY, 80);
     netconn_listen(nc);
-    char buf[PAGE_BUFFER_LENGTH];
+    char l_pageBuf[PAGE_BUFFER_LENGTH];
 
     while (1) {
         err_t err = netconn_accept(nc, &client);
@@ -252,12 +258,12 @@ static void HttpServer_httpd_task(void *pvParameters) {
                     enum ActionType l_type = Config_parceUri(uri);
                     switch (l_type) {
                     case kRoot:
-                        HttpServer_getMainPage(&buf);
-                        printf("Buffer: \n %s\n", buf);
-                        netconn_write(client, buf, strlen(buf), NETCONN_COPY);
+                        HttpServer_getMainPage(l_pageBuf);
+                        printf("Buffer: \n %s\n", l_pageBuf);
+                        netconn_write(client, l_pageBuf, strlen(l_pageBuf), NETCONN_COPY);
                         break;
                     default:
-                        snprintf(buf, sizeof(buf),
+                        snprintf(l_pageBuf, sizeof(l_pageBuf),
                                  "{\"m\":%d,\"fh\":%d,\"ch\":%d,\"th\":%d,"
                                  "\"tl\":%d}",
                                  s_currentData.currentMode,
@@ -265,7 +271,7 @@ static void HttpServer_httpd_task(void *pvParameters) {
                                  s_currentData.currentHue,
                                  s_currentData.currentTailHue,
                                  s_currentData.currentTailLength);
-                        netconn_write(client, buf, strlen(buf), NETCONN_COPY);
+                        netconn_write(client, l_pageBuf, strlen(l_pageBuf), NETCONN_COPY);
                         break;
                     }
                 }
