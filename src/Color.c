@@ -1,6 +1,6 @@
 
-#include "Color.h"
 #include <ws2812_i2s/ws2812_i2s.h>
+#include "Color.h"
 
 ws2812_pixel_t Color_hexToRGB(uint32_t hex) {
     ws2812_pixel_t l_data;
