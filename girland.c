@@ -13,15 +13,15 @@
 #include "espressif/esp_common.h"
 #include "queue.h"
 #include "task.h"
+#include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ws2812_i2s/ws2812_i2s.h>
 
-#include <math.h>
-
+#include "Color.h"
 #include "HttpServer.h"
 #include "Wifi.h"
-#include "ws2812_i2s/ws2812_i2s.h"
 
 // #include "spiffs.h"
 // #include "esp_spiffs.h"
@@ -46,99 +46,15 @@
 #define SNOW_LIFE 30 * 2 // 5sec;
 #define SNOW_NUMBER 15
 
-#define FAST 10
-#define MIDDLE 5
-#define SLOW 2
-#define RAINBOW_MODE 0
-#define WAVE_MODE 1
-#define TAPES_MODE 2
-#define SNOW_MODE 3
-#define TORNADO_MODE 4
-#define DISABLE_MODE -1
-
 
 QueueHandle_t render_queue;
 
-typedef struct {
-    double h; // angle in degrees
-    double s; // a fraction between 0 and 1
-    double v; // a fraction between 0 and 1
-} hsv;
-
-typedef struct {
+struct snow_item {
     int maxAge;
     int age;
     int x;
     int y;
-} snow_item;
-
-ws2812_pixel_t hexToRGB(uint32_t hex) {
-    ws2812_pixel_t data;
-    data.red = (hex & 0xFF0000) >> 16;
-    data.green = (hex & 0x00FF00) >> 8;
-    data.blue = (hex & 0x0000FF) >> 0;
-    return data;
-}
-
-bool getAuthData();
-
-ws2812_pixel_t hsv2rgb(hsv in) {
-    double hh, p, q, t, ff;
-    long i;
-    ws2812_pixel_t out;
-    if (in.s <= 0.0) { // < is bogus, just shuts up warnings
-
-        out.red = (int)(in.v * 255);
-        out.green = (int)(in.v * 255);
-        out.blue = (int)(in.v * 255);
-        return out;
-    }
-    hh = in.h;
-    if (hh >= 360.0)
-        hh = 0.0;
-    hh /= 60.0;
-    i = (long)hh;
-    ff = hh - i;
-    p = in.v * (1.0 - in.s);
-    q = in.v * (1.0 - (in.s * ff));
-    t = in.v * (1.0 - (in.s * (1.0 - ff)));
-
-    switch (i) {
-    case 0:
-        out.red = (int)(in.v * 255);
-        out.green = (int)(t * 255);
-        out.blue = (int)(p * 255);
-        break;
-    case 1:
-        out.red = (int)(q * 255);
-        out.green = (int)(in.v * 255);
-        out.blue = (int)(p * 255);
-        break;
-    case 2:
-        out.red = (int)(p * 255);
-        out.green = (int)(in.v * 255);
-        out.blue = (int)(t * 255);
-        break;
-
-    case 3:
-        out.red = (int)(p * 255);
-        out.green = (int)(q * 255);
-        out.blue = (int)(in.v * 255);
-        break;
-    case 4:
-        out.red = (int)(t * 255);
-        out.green = (int)(p * 255);
-        out.blue = (int)(in.v * 255);
-        break;
-    case 5:
-    default:
-        out.red = (int)(in.v * 255);
-        out.green = (int)(p * 255);
-        out.blue = (int)(q * 255);
-        break;
-    }
-    return out;
-}
+};
 
 void generateRainbow(int frame, ws2812_pixel_t *pixels, bool vertical,
                      int speed, bool direction) {
@@ -161,7 +77,7 @@ void generateRainbow(int frame, ws2812_pixel_t *pixels, bool vertical,
             data.h = (double)pos;
             data.s = 1.0;
             data.v = 1.0;
-            pixels[x * HEIGHT + y] = hsv2rgb(data);
+            pixels[x * HEIGHT + y] = Color_hsv2rgb(data);
         }
     }
 }
@@ -179,9 +95,9 @@ void generateWave(int frame, ws2812_pixel_t *pixels, bool direction, int speed,
                 data.h = hue;
                 data.s = 1;
                 data.v = 1;
-                pixels[locX * HEIGHT + locY] = hsv2rgb(data);
+                pixels[locX * HEIGHT + locY] = Color_hsv2rgb(data);
             } else {
-                pixels[locX * HEIGHT + locY] = hexToRGB(0x000000);
+                pixels[locX * HEIGHT + locY] = Color_hexToRGB(0x000000);
             }
         }
     }
@@ -199,15 +115,15 @@ void generateTapes(int frame, ws2812_pixel_t *pixels, int speed, int hue) {
                 data.h = hue;
                 data.s = 1;
                 data.v = 1;
-                pixels[x * HEIGHT + locY] = hsv2rgb(data);
+                pixels[x * HEIGHT + locY] = Color_hsv2rgb(data);
             } else {
-                pixels[x * HEIGHT + locY] = hexToRGB(0x000000);
+                pixels[x * HEIGHT + locY] = Color_hexToRGB(0x000000);
             }
         }
     }
 }
 
-snow_item snowArr[SNOW_NUMBER];
+struct snow_item snowArr[SNOW_NUMBER];
 bool vacantPos[SNOW_NUMBER] = {true, true, true, true, true, true, true};
 uint32_t max = 0;
 void generateSnow(ws2812_pixel_t *pixels, int hue) {
@@ -225,7 +141,7 @@ void generateSnow(ws2812_pixel_t *pixels, int hue) {
         if ((int)((uint32_t)random()) % 10 > 4) {
             ;
         } else {
-            snow_item item;
+            struct snow_item item;
 
             item.x = (int)((uint32_t)random()) % WIDTH;
             item.y = (int)((uint32_t)random()) % HEIGHT;
@@ -237,7 +153,7 @@ void generateSnow(ws2812_pixel_t *pixels, int hue) {
     }
     for (int x = 0; x < WIDTH; x++) {
         for (int y = 0; y < HEIGHT; y++) {
-            pixels[x * HEIGHT + y] = hexToRGB(0x000000);
+            pixels[x * HEIGHT + y] = Color_hexToRGB(0x000000);
         }
     }
     for (int i = 0; i < SNOW_NUMBER; i++) {
@@ -253,7 +169,7 @@ void generateSnow(ws2812_pixel_t *pixels, int hue) {
                 data.v = (float)age / maxValueAge;
             data.h = hue;
             data.s = 1;
-            pixels[snowArr[i].x * HEIGHT + snowArr[i].y] = hsv2rgb(data);
+            pixels[snowArr[i].x * HEIGHT + snowArr[i].y] = Color_hsv2rgb(data);
             if (age <= 0)
                 vacantPos[i] = true;
             else
@@ -262,10 +178,11 @@ void generateSnow(ws2812_pixel_t *pixels, int hue) {
     }
 }
 
-void generateTornado(int frame, ws2812_pixel_t *pixels, int tailHue, int tailLength, int hue) {
+void generateTornado(int frame, ws2812_pixel_t *pixels, int tailHue,
+                     int tailLength, int hue) {
     for (int x = 0; x < WIDTH; x++) {
         for (int y = 0; y < HEIGHT; y++) {
-            pixels[x * HEIGHT + y] = hexToRGB(0x000000);
+            pixels[x * HEIGHT + y] = Color_hexToRGB(0x000000);
         }
     }
     int currentPos = frame % LED_NUMBER;
@@ -286,19 +203,19 @@ void generateTornado(int frame, ws2812_pixel_t *pixels, int tailHue, int tailLen
         data.h = tailHue;
         data.s = 1;
         data.v = (float)1 / (i * i * 0.5 + 1);
-        pixels[currTailPos] = hsv2rgb(data);
+        pixels[currTailPos] = Color_hsv2rgb(data);
     }
     hsv data;
     data.s = 1;
     data.v = 1;
     data.h = hue;
-    pixels[currentX * HEIGHT + currentY] = hsv2rgb(data);
+    pixels[currentX * HEIGHT + currentY] = Color_hsv2rgb(data);
 }
 
 void shutdown(ws2812_pixel_t *pixels) {
     for (int x = 0; x < WIDTH; x++) {
         for (int y = 0; y < HEIGHT; y++) {
-            pixels[x * HEIGHT + y] = hexToRGB(0x000000);
+            pixels[x * HEIGHT + y] = Color_hexToRGB(0x000000);
         }
     }
 }
@@ -320,12 +237,10 @@ void render(int frame, ws2812_pixel_t *pixels) {
 
     switch (mode) {
     case RAINBOW_MODE:
-        generateRainbow(frame, pixels, rainbowAlign, speed,
-                        direction);
+        generateRainbow(frame, pixels, rainbowAlign, speed, direction);
         break;
     case WAVE_MODE:
-        generateWave(frame, pixels, direction, speed,
-                     currentMirror, hue);
+        generateWave(frame, pixels, direction, speed, currentMirror, hue);
         break;
     case TAPES_MODE:
         generateTapes(frame, pixels, speed, hue);
@@ -340,8 +255,7 @@ void render(int frame, ws2812_pixel_t *pixels) {
         shutdown(pixels);
         break;
     default:
-        generateRainbow(frame, pixels, rainbowAlign, speed,
-                        direction);
+        generateRainbow(frame, pixels, rainbowAlign, speed, direction);
         break;
     }
 }
