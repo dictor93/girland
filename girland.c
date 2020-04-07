@@ -7,8 +7,8 @@
  *
  * This sample code is in the public domain.,
  */
-#include "FreeRTOS.h"
-#include "esp/uart.h"
+#include <FreeRTOS.h>
+#include <esp/uart.h>
 #include "esp8266.h"
 #include "espressif/esp_common.h"
 #include "queue.h"
@@ -17,12 +17,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ws2812_i2s/ws2812_i2s.h>
 
 #include "Color.h"
 #include "HttpServer.h"
 #include "Wifi.h"
 
+#include <ws2812_i2s/ws2812_i2s.h>
 // #include "spiffs.h"
 // #include "esp_spiffs.h"
 
@@ -46,7 +46,6 @@
 #define SNOW_LIFE 30 * 2 // 5sec;
 #define SNOW_NUMBER 15
 
-
 QueueHandle_t render_queue;
 
 struct snow_item {
@@ -59,7 +58,7 @@ struct snow_item {
 void generateRainbow(int frame, ws2812_pixel_t *pixels, bool vertical,
                      int speed, bool direction) {
     int ledsInGradient = vertical ? HEIGHT : WIDTH;
-    hsv data;
+    hsv_t data;
     for (int x = 0; x < WIDTH; x++) {
         int locX = direction ? x : WIDTH - x - 1;
         int pos = 0;
@@ -91,7 +90,7 @@ void generateWave(int frame, ws2812_pixel_t *pixels, bool direction, int speed,
             locY = direction ? HEIGHT - locY - 1 : locY;
             if (((y + frame / (11 - speed)) % HEIGHT >= (x / 3 + 3)) &&
                 ((y + frame / (11 - speed)) % HEIGHT < (x / 3 + 6))) {
-                hsv data;
+                hsv_t data;
                 data.h = hue;
                 data.s = 1;
                 data.v = 1;
@@ -111,7 +110,7 @@ void generateTapes(int frame, ws2812_pixel_t *pixels, int speed, int hue) {
             // locY = direction ? HEIGHT - locY - 1 : locY;
             if (y == (int)(x / 3 + 1 + frame / (12 - speed)) % HEIGHT ||
                 y == (int)(HEIGHT - x / 3 + frame / (12 - speed)) % HEIGHT) {
-                hsv data;
+                hsv_t data;
                 data.h = hue;
                 data.s = 1;
                 data.v = 1;
@@ -158,7 +157,7 @@ void generateSnow(ws2812_pixel_t *pixels, int hue) {
     }
     for (int i = 0; i < SNOW_NUMBER; i++) {
         if (!vacantPos[i]) {
-            hsv data;
+            hsv_t data;
             int maxAge = snowArr[i].maxAge;
             float deca = snowArr[i].maxAge / 5;
             int age = snowArr[i].age;
@@ -199,13 +198,13 @@ void generateTornado(int frame, ws2812_pixel_t *pixels, int tailHue,
         if (tailX % 2)
             tailY = HEIGHT - tailY - 1;
         int currTailPos = (tailX * HEIGHT + tailY) % LED_NUMBER;
-        hsv data;
+        hsv_t data;
         data.h = tailHue;
         data.s = 1;
         data.v = (float)1 / (i * i * 0.5 + 1);
         pixels[currTailPos] = Color_hsv2rgb(data);
     }
-    hsv data;
+    hsv_t data;
     data.s = 1;
     data.v = 1;
     data.h = hue;
