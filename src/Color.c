@@ -1,5 +1,6 @@
+
 #include "Color.h"
-#include "ws2812_i2s/ws2812_i2s.h"
+#include <ws2812_i2s/ws2812_i2s.h>
 
 ws2812_pixel_t Color_hexToRGB(uint32_t hex) {
     ws2812_pixel_t l_data;
@@ -48,7 +49,7 @@ ws2812_pixel_t Color_hsv2rgb(hsv_t in) {
         break;
 
     case 3:
-        l_out.red = (int)(p * 255);
+        l_out.red = (int)(l_p * 255);
         l_out.green = (int)(l_q * 255);
         l_out.blue = (int)(in.v * 255);
         break;
