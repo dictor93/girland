@@ -4,7 +4,7 @@
 #include <FreeRTOS.h>
 #include "queue.h"
 #include "task.h"
-
+#include <string.h>
 #include <esp/uart.h>
 #include "esp8266.h"
 #include "espressif/esp_common.h"
