@@ -203,38 +203,27 @@ static void Render_render(int frame, ws2812_pixel_t *pixels) {
 
     struct parserData_t *l_params = HttpServer_getCurrentParams();
 
-    int l_hue = l_params->currentHue;
-    int l_mode = l_params->currentMode;
-    int l_speed = l_params->currentSpeed;
-    int l_tailHue = l_params->currentTailHue;
-    int l_snowLife = l_params->currentSnowLife;
-    int l_snowNumber = l_params->currentSnowNumber;
-    int l_tailLength = l_params->currentTailLength;
-    bool l_rainbowAlign = l_params->rainbowAlign;
-    bool l_currentMirror = l_params->currentMirror;
-    bool l_direction = l_params->currentDirection;
-
     switch (l_mode) {
     case RAINBOW_MODE:
-        Render_generateRainbow(frame, pixels, l_rainbowAlign, l_speed, l_direction);
+        Render_generateRainbow(frame, pixels, l_params->rainbowAlign, l_params->currentSpeed, l_params->currentDirection);
         break;
     case WAVE_MODE:
-        Render_generateWave(frame, pixels, l_currentMirror, l_speed, l_direction, l_hue);
+        Render_generateWave(frame, pixels, l_params->currentMirror, l_params->currentSpeed, l_params->currentDirection, l_params->currentHue);
         break;
     case TAPES_MODE:
-        Render_generateTapes(frame, pixels, l_speed, l_hue);
+        Render_generateTapes(frame, pixels, l_params->currentSpeed, l_params->currentHue);
         break;
     case SNOW_MODE:
-        Render_generateSnow(pixels, l_hue);
+        Render_generateSnow(pixels, l_params->currentHue);
         break;
     case TORNADO_MODE:
-        Render_generateTornado(frame, pixels, l_tailHue, l_tailLength, l_hue);
+        Render_generateTornado(frame, pixels, l_params->currentTailHue, l_params->currentTailLength, l_params->currentHue);
         break;
     case DISABLE_MODE:
         Render_shutdown(pixels);
         break;
     default:
-        Render_generateRainbow(frame, pixels, l_rainbowAlign, l_speed, l_direction);
+        Render_generateRainbow(frame, pixels, l_params->rainbowAlign, l_params->currentSpeed, l_params->currentDirection);
         break;
     }
 }
