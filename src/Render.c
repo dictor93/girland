@@ -11,7 +11,7 @@
 
 #include "HttpServer.h"
 #include "Color.h"
-#include "Render.H"
+#include "Render.h"
 
 #define HEIGHT 16
 #define WIDTH 16
