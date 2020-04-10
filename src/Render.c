@@ -16,7 +16,7 @@
 #define HEIGHT 16
 #define WIDTH 16
 
-#define LED_NUMBER WIDTH *HEIGHT
+#define LED_NUMBER WIDTH * HEIGHT
 #define RENDER_FREQ 30
 
 #define SNOW_COLOR 0xB900FF
@@ -35,8 +35,20 @@
 
 static QueueHandle_t m_render_queue;
 
-static void Render_generateRainbow(int frame, ws2812_pixel_t *pixels, bool vertical,
-                     int speed, bool direction) {
+static void revertOdd(hsv_t *rawData, ws2812_pixel_t *pixels) {
+
+    for (int x = 0; x < WIDTH; x++) {
+        bool odd = x % 2;
+        for (int y = 0; y < HEIGHT; y++) {
+            int locY = !odd ? y : HEIGHT - y - 1;
+            pixels[y + x * HEIGHT] = Color_hsv2rgb(rawData[locY + x * HEIGHT]);
+        }
+    }
+    free(rawData);
+}
+
+static void Render_generateRainbow(int frame, ws2812_pixel_t *pixels,
+                                   bool vertical, int speed, bool direction) {
     int l_ledsInGradient = vertical ? HEIGHT : WIDTH;
     hsv_t l_data;
     for (int x = 0; x < WIDTH; x++) {
@@ -44,69 +56,80 @@ static void Render_generateRainbow(int frame, ws2812_pixel_t *pixels, bool verti
         int l_pos = 0;
         if (!vertical)
             l_pos = (int)(((double)frame) * speed +
-                        (double)l_locX * 360 / l_ledsInGradient) %
-                  360;
+                          (double)l_locX * 360 / l_ledsInGradient) %
+                    360;
         for (int y = 0; y < HEIGHT; y++) {
             int locY = (l_locX % 2) ? y : HEIGHT - y - 1;
             locY = direction ? locY : HEIGHT - locY - 1;
             if (vertical)
                 l_pos = (int)(((double)frame) * speed +
-                            (double)locY * 360 / l_ledsInGradient) %
-                      360;
+                              (double)locY * 360 / l_ledsInGradient) %
+                        360;
             l_data.h = (double)l_pos;
             l_data.s = 1.0;
             l_data.v = 1.0;
+
             pixels[x * HEIGHT + y] = Color_hsv2rgb(l_data);
         }
     }
 }
 
-static void Render_generateWave(int frame, ws2812_pixel_t *pixels, bool direction, int speed,
-                  bool mirror, int hue) {
+static void Render_generateWave(int frame, ws2812_pixel_t *pixels,
+                                bool direction, int speed, bool mirror,
+                                int hue) {
+
+    hsv_t *data = (hsv_t*)malloc(WIDTH*HEIGHT*sizeof(hsv_t));
+
     for (int x = 0; x < WIDTH; x++) {
         int l_locX = mirror ? x : WIDTH - x - 1;
         for (int y = 0; y < HEIGHT; y++) {
-            int l_locY = (x % 2) ? y : HEIGHT - y - 1;
-            l_locY = direction ? HEIGHT - l_locY - 1 : l_locY;
+            int l_locY = direction ? HEIGHT - y - 1 : y;
+            hsv_t l_data;
+            l_data.h = hue;
+            l_data.s = 1;
+            l_data.v = 1;
             if (((y + frame / (11 - speed)) % HEIGHT >= (x / 3 + 3)) &&
                 ((y + frame / (11 - speed)) % HEIGHT < (x / 3 + 6))) {
-                hsv_t l_data;
-                l_data.h = hue;
-                l_data.s = 1;
-                l_data.v = 1;
-                pixels[l_locX * HEIGHT + l_locY] = Color_hsv2rgb(l_data);
             } else {
-                pixels[l_locX * HEIGHT + l_locY] = Color_hexToRGB(0x000000);
+                l_data.v = 0;
             }
+            data[x * HEIGHT + l_locY] = l_data;
         }
     }
+    revertOdd(data, pixels);
 }
 
-static void Render_generateTapes(int frame, ws2812_pixel_t *pixels, int speed, int hue) {
+static void Render_generateTapes(int frame, ws2812_pixel_t *pixels, int speed,
+                                 int hue) {
+    hsv_t *data = (hsv_t*)malloc(WIDTH*HEIGHT*sizeof(hsv_t));
+
+
     for (int x = 0; x < WIDTH; x++) {
-        // int locX = mirror ? x : WIDTH - x - 1;
         for (int y = 0; y < HEIGHT; y++) {
-            int l_locY = (x % 2) ? y : HEIGHT - y - 1;
-            // locY = direction ? HEIGHT - locY - 1 : locY;
+            hsv_t l_data;
+            l_data.h = hue;
+            l_data.s = 1;
+            l_data.v = 1;
             if (y == (int)(x / 3 + 1 + frame / (12 - speed)) % HEIGHT ||
                 y == (int)(HEIGHT - x / 3 + frame / (12 - speed)) % HEIGHT) {
-                hsv_t l_data;
-                l_data.h = hue;
-                l_data.s = 1;
-                l_data.v = 1;
-                pixels[x * HEIGHT + l_locY] = Color_hsv2rgb(l_data);
+
             } else {
-                pixels[x * HEIGHT + l_locY] = Color_hexToRGB(0x000000);
+                l_data.v = 0;
             }
+            data[x * HEIGHT + y] = l_data;
         }
     }
+
+    revertOdd(data, pixels);
+    
 }
 
 static struct snow_item m_snowArr[SNOW_NUMBER];
-static bool m_vacantPos[SNOW_NUMBER] = {true, true, true, true, true, true, true};
+static bool m_vacantPos[SNOW_NUMBER] = {true, true, true, true,
+                                        true, true, true};
 
 static void Render_generateSnow(ws2812_pixel_t *pixels, int hue) {
-    
+
     int l_vacance = -1;
 
     for (int i = 0; i < SNOW_NUMBER; i++) {
@@ -148,7 +171,8 @@ static void Render_generateSnow(ws2812_pixel_t *pixels, int hue) {
                 l_data.v = (float)l_age / l_maxValueAge;
             l_data.h = hue;
             l_data.s = 1;
-            pixels[m_snowArr[i].x * HEIGHT + m_snowArr[i].y] = Color_hsv2rgb(l_data);
+            pixels[m_snowArr[i].x * HEIGHT + m_snowArr[i].y] =
+                Color_hsv2rgb(l_data);
             if (l_age <= 0)
                 m_vacantPos[i] = true;
             else
@@ -157,38 +181,43 @@ static void Render_generateSnow(ws2812_pixel_t *pixels, int hue) {
     }
 }
 
-static void Render_generateTornado(int frame, ws2812_pixel_t *pixels, int tailHue,
-                     int tailLength, int hue) {
+static void Render_generateTornado(int frame, ws2812_pixel_t *pixels,
+                                   int tailHue, int tailLength, int hue) {
+
+    hsv_t *data = (hsv_t*)malloc(WIDTH*HEIGHT*sizeof(hsv_t));
+
     for (int x = 0; x < WIDTH; x++) {
         for (int y = 0; y < HEIGHT; y++) {
-            pixels[x * HEIGHT + y] = Color_hexToRGB(0x000000);
+            hsv_t l_data;
+            l_data.h = 0;
+            l_data.s = 1;
+            l_data.v = 0;
+
+            data[x * HEIGHT + y] = l_data;
         }
     }
-    int l_currentPos = frame % LED_NUMBER;
+    int l_currentPos = frame % (WIDTH * HEIGHT);
     int l_currentX = l_currentPos % WIDTH;
     int l_currentY = (int)l_currentPos / WIDTH;
-    if (l_currentX % 2)
-        l_currentY = HEIGHT - l_currentY - 1;
     for (int i = 0; i < tailLength; i++) {
         int l_tailPos = l_currentPos - 1 - i;
         if (l_tailPos < 0)
-            l_tailPos = LED_NUMBER + l_tailPos;
+            l_tailPos = WIDTH * HEIGHT + l_tailPos;
         int l_tailX = l_tailPos % WIDTH;
         int l_tailY = (int)l_tailPos / WIDTH;
-        if (l_tailX % 2)
-            l_tailY = HEIGHT - l_tailY - 1;
-        int l_currTailPos = (l_tailX * HEIGHT + l_tailY) % LED_NUMBER;
+        int l_currTailPos = (l_tailX * HEIGHT + l_tailY) % (WIDTH * HEIGHT);
         hsv_t l_data;
         l_data.h = tailHue;
         l_data.s = 1;
         l_data.v = (float)1 / (i * i * 0.5 + 1);
-        pixels[l_currTailPos] = Color_hsv2rgb(l_data);
+        data[l_currTailPos] = l_data;
     }
     hsv_t l_data;
     l_data.s = 1;
     l_data.v = 1;
     l_data.h = hue;
-    pixels[l_currentX * HEIGHT + l_currentY] = Color_hsv2rgb(l_data);
+    data[l_currentX * HEIGHT + l_currentY] = l_data;
+    revertOdd(data, pixels);
 }
 
 static void Render_shutdown(ws2812_pixel_t *pixels) {
@@ -205,25 +234,55 @@ static void Render_render(int frame, ws2812_pixel_t *pixels) {
 
     switch (l_params->currentMode) {
     case RAINBOW_MODE:
-        Render_generateRainbow(frame, pixels, l_params->rainbowAlign, l_params->currentSpeed, l_params->currentDirection);
+        Render_generateRainbow(
+            frame,
+            pixels,
+            l_params->rainbowAlign,
+            l_params->currentSpeed,
+            l_params->currentDirection
+        );
         break;
     case WAVE_MODE:
-        Render_generateWave(frame, pixels, l_params->currentMirror, l_params->currentSpeed, l_params->currentDirection, l_params->currentHue);
+        Render_generateWave(
+            frame,
+            pixels,
+            l_params->currentMirror,
+            l_params->currentSpeed,
+            l_params->currentDirection,
+            l_params->currentHue
+        );
         break;
     case TAPES_MODE:
-        Render_generateTapes(frame, pixels, l_params->currentSpeed, l_params->currentHue);
+        Render_generateTapes(
+            frame,
+            pixels,
+            l_params->currentSpeed,
+            l_params->currentHue
+        );
         break;
     case SNOW_MODE:
         Render_generateSnow(pixels, l_params->currentHue);
         break;
     case TORNADO_MODE:
-        Render_generateTornado(frame, pixels, l_params->currentTailHue, l_params->currentTailLength, l_params->currentHue);
+        Render_generateTornado(
+            frame,
+            pixels,
+            l_params->currentTailHue,
+            l_params->currentTailLength,
+            l_params->currentHue
+        );
         break;
     case DISABLE_MODE:
         Render_shutdown(pixels);
         break;
     default:
-        Render_generateRainbow(frame, pixels, l_params->rainbowAlign, l_params->currentSpeed, l_params->currentDirection);
+        Render_generateRainbow(
+            frame,
+            pixels,
+            l_params->rainbowAlign,
+            l_params->currentSpeed,
+            l_params->currentDirection
+        );
         break;
     }
 }
