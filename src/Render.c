@@ -203,7 +203,7 @@ static void Render_render(int frame, ws2812_pixel_t *pixels) {
 
     struct parserData_t *l_params = HttpServer_getCurrentParams();
 
-    switch (l_mode) {
+    switch (l_params->currentMode) {
     case RAINBOW_MODE:
         Render_generateRainbow(frame, pixels, l_params->rainbowAlign, l_params->currentSpeed, l_params->currentDirection);
         break;
