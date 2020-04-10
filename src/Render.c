@@ -33,7 +33,7 @@
 #define SNOW_LIFE 30 * 2 // 5sec;
 #define SNOW_NUMBER 15
 
-QueueHandle_t m_render_queue;
+static QueueHandle_t m_render_queue;
 
 static void Render_generateRainbow(int frame, ws2812_pixel_t *pixels, bool vertical,
                      int speed, bool direction) {
@@ -102,8 +102,8 @@ static void Render_generateTapes(int frame, ws2812_pixel_t *pixels, int speed, i
     }
 }
 
-struct snow_item m_snowArr[SNOW_NUMBER];
-bool m_vacantPos[SNOW_NUMBER] = {true, true, true, true, true, true, true};
+static struct snow_item m_snowArr[SNOW_NUMBER];
+static bool m_vacantPos[SNOW_NUMBER] = {true, true, true, true, true, true, true};
 
 static void Render_generateSnow(ws2812_pixel_t *pixels, int hue) {
     
