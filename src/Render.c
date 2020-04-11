@@ -12,9 +12,7 @@
 #include "HttpServer.h"
 #include "Color.h"
 #include "Render.h"
-
-#define HEIGHT 16
-#define WIDTH 16
+#include "LocalConfig.h"
 
 #define LED_NUMBER WIDTH * HEIGHT
 #define RENDER_FREQ 30

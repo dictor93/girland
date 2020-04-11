@@ -2,7 +2,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
-#include "Config.h"
+#include "LocalConfig.h"
 
 bool s_isConnectionFault = false;
 
