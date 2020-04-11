@@ -12,6 +12,7 @@ extern "C" {
 #define SNOW_MODE 3
 #define TORNADO_MODE 4
 #define DISABLE_MODE -1
+#define UPDATE_MODE 10
 
 #define FAST 10
 #define MIDDLE 5

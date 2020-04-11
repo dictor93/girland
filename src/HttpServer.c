@@ -5,7 +5,16 @@
 #include <lwip/api.h>
 #include "dhcpserver.h"
 
+#include "string.h"
+#include "http_client_ota.h"
 #include "HttpServer.h"
+#include "LocalConfig.h"
+
+static ota_info s_info = {
+    .server      = "droidkharkiv.ddns.net",
+    .port        = 30003,
+    .binary_path = BINARY_PATH,
+};
 
 struct parserData_t s_currentData;
 
@@ -53,7 +62,7 @@ static void HttpServer_getMainPage(char *buf) {
         "['all'], n: 'Mode set', p: '/mode', c: [ { n: 'RAINBOW', t: 'button', "
         "}, { n: 'WAVE', t: 'button', }, { n: 'TAPES', t: 'button', }, { n: "
         "'SNOW', t: 'button', }, { n: 'TORNADO', t: 'button', }, { n: "
-        "'DISABLE', t: 'button', } ] }, { a: [0, 1], n: 'Direction set', p: "
+        "'DISABLE', t: 'button', }, {n: 'UPDATE', t: 'button', } ] }, { a: [0, 1], n: 'Direction set', p: "
         "'/dir', c: [ { n: 'FORWARD', t: 'button', }, { n: 'BACKWARD', t: "
         "'button', }, ] }, { a: [0, 1, 2], n: 'Speed set', p: '/speed', c: [ { "
         "n: 'FAST', t: 'button', }, { n: 'MIDDLE', t: 'button', }, { n: "
@@ -100,6 +109,8 @@ static void Config_setMode(char *uri) {
         s_currentData.currentMode = TORNADO_MODE;
     } else if (strstr(uri, "DISABLE")) {
         s_currentData.currentMode = DISABLE_MODE;
+    } else if (strstr(uri, "UPDATE")) {
+        s_currentData.currentMode = UPDATE_MODE;
     }
 }
 
@@ -247,7 +258,7 @@ static void HttpServer_httpd_task(void *pvParameters) {
                     int len = uriEnd - uriStart;
                     memcpy(uri, uriStart, len);
                     uri[len] = '\0';
-                    printf("uri: %s\n", uri);
+                    printf("Uri: %s\n", uri);
                     // закидываем uri в парсер
                     enum ActionType l_type = Config_parceUri(uri);
                     switch (l_type) {
@@ -278,6 +289,39 @@ static void HttpServer_httpd_task(void *pvParameters) {
     }
 }
 
+ static void ota_task()
+{
+    // Wait until we have joined AP and are assigned an IP *
+    while (sdk_wifi_station_get_connect_status() != STATION_GOT_IP)
+        vTaskDelayMs(100);
+    struct parserData_t *l_params = HttpServer_getCurrentParams();
+
+    while (1) {
+        OTA_err err;
+        // Remake this task until ota work
+        if (l_params->currentMode == UPDATE_MODE) {
+            err = ota_update(&s_info);
+            ota_error_handling(err);
+
+            if(err != OTA_UPDATE_DONE) {
+                vTaskDelayMs(1000);
+                printf("\n\n\n");
+                continue;
+            }
+
+            vTaskDelayMs(1000);
+            printf("Delay 1\n");
+            vTaskDelayMs(1000);
+            printf("Delay 2\n");
+            vTaskDelayMs(1000);
+            printf("Delay 3\n");
+
+            printf("Reset\n");
+            sdk_system_restart();
+        }
+    }    
+}   
+
 void HttpServer_init() {
 
     s_currentData.currentHue = 196;
@@ -292,4 +336,5 @@ void HttpServer_init() {
     s_currentData.rainbowAlign = IS_RAINBOW_VERTICAL;
 
     xTaskCreate(&HttpServer_httpd_task, "HTTP_DEAMON", 4096, NULL, 2, NULL);
+    xTaskCreate(&ota_task, "ota-task", 1024, NULL, 10, NULL);
 }
