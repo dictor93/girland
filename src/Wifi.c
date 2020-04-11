@@ -2,11 +2,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
-
-#include "Wifi.h"
-
-#define SSID "Jesus"
-#define PWD "8715387153"
+#include "Config.h"
 
 bool s_isConnectionFault = false;
 
