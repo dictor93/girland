@@ -8,6 +8,7 @@
 #include <esp/uart.h>
 #include "esp8266.h"
 #include "espressif/esp_common.h"
+#include <math.h>
 
 #include "HttpServer.h"
 #include "Color.h"
@@ -97,29 +98,35 @@ static void Render_generateWave(int frame, ws2812_pixel_t *pixels,
     revertOdd(data, pixels);
 }
 
+static int m_coef = 3;
+static int m_matrixOffset = (int)ceil(HEIGHT/3);
+static int m_phase = 0;
+static int m_speed = 0;
 static void Render_generateTapes(int frame, ws2812_pixel_t *pixels, int speed,
                                  int hue) {
     hsv_t *data = (hsv_t*)malloc(WIDTH*HEIGHT*sizeof(hsv_t));
-
-
+    m_speed = speed;
     for (int x = 0; x < WIDTH; x++) {
         for (int y = 0; y < HEIGHT; y++) {
             hsv_t l_data;
             l_data.h = hue;
             l_data.s = 1;
-            l_data.v = 1;
-            if (y == (int)(x / 3 + 1 + frame / (12 - speed)) % HEIGHT ||
-                y == (int)(HEIGHT - x / 3 + frame / (12 - speed)) % HEIGHT) {
-
-            } else {
-                l_data.v = 0;
+            l_data.v = 0;
+            if (
+                ((frame / (10 / speed) + y) % (m_matrixOffset * 2) == (int)(x / m_coef)) 
+                || ((frame / (10 / speed) + y - 3) % (m_matrixOffset * 2) == (int)((x) / -m_coef) + ceil(HEIGHT / 2 -1))
+            ) {
+                l_data.v = m_phase ? (float)(1 - (float)m_phase / 10) : 1;
+                if(m_phase > 0 && y > 0) {
+                    data[x * WIDTH + y - 1].v =  (float)m_phase / 10;
+                }
             }
             data[x * HEIGHT + y] = l_data;
         }
     }
-
     revertOdd(data, pixels);
-    
+    m_phase = (m_phase + speed) % 10;
+    if(m_speed != speed) m_phase = 0;
 }
 
 static struct snow_item m_snowArr[SNOW_NUMBER];
