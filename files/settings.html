@@ -1,1 +1,52 @@
-<html><head><style></style></head><body><divclass="root"><formmethod="post"id="settings"><div><label>SSID<inputtype="text"name="SSID"value="%s"placeholder="SSID"></label></div><div><label>PASSWORD<inputtype="text"name="PWD"value="%s"placeholder="PASSWORD"></label></div><button>Send</button></form></div></body><script>constform=document.getElementById("settings");form.addEventListener('submit',(e)=>{e.preventDefault();fetch('/wifiset',{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({ssid:e.target[0].value,pwd:e.target[1].value,}),});});</script></html>
+<html>
+
+<head>
+  <title>Settings</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div class="root">
+    <form method="post" id="settings">
+      <div>
+        <label>
+          SSID<input type="text" name="SSID" value="%s" placeholder="SSID">
+        </label>
+      </div>
+      <div>
+        <label>
+          PASSWORD<input type="text" name="PWD" value="%s" placeholder="PASSWORD">
+        </label>
+      </div>
+      <input id="submit" type="button" value="Send">
+      </form>
+  </div>
+</body>
+<script>
+  const form = document.getElementById("settings");
+  fetch('/settingsstate').then(resp => resp.text()).then(resp => {
+    resp.split('\n').forEach(row => {
+      row = row.split('=')
+      if(row[0] === 'SSID') {
+        form[0].value = row[1]
+      } else if (row[0] === 'PWD') {
+        form[1].value = row[1]
+      }
+    })
+  })
+  document.getElementById("submit").addEventListener('submit', () => {
+    const data = `SSID=${form[0].value}
+PWD=${form[1].value}`
+    console.log(data)
+    fetch('/wifiset', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: data,
+    });
+  }
+  );
+</script>
+
+</html>
