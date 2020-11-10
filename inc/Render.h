@@ -14,6 +14,9 @@ typedef struct snow_item {
 
 void Render_init();
 
+//setings for the led matrix 
+#define HEIGHT 16
+#define WIDTH 16
 
 #ifdef __cplusplus
 } // extern "C"
