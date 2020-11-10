@@ -30,7 +30,7 @@ extern "C" {
 #define IS_RAINBOW_VERTICAL true
 #define IS_RAINBOW_HORISONTAL false
 
-#define PAGE_BUFFER_LENGTH 3400
+#define PAGE_BUFFER_LENGTH 10000
 #define MAX_URI_LEN 32
 
 
