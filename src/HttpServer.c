@@ -41,7 +41,8 @@ static enum ActionType HttpServer_getRequestType(char *uri) {
     return l_returnType;
 }
 
-static void HttpServer_router(char *uri, char *bufer) {
+static void HttpServer_router(char *uri, char *bufer, char *otherBody) {
+    printf("\n\nOther body:\n%s\n\n", otherBody);
     enum ActionType l_type = HttpServer_getRequestType(uri);
     switch (l_type) {
     case kRoot:
@@ -98,19 +99,23 @@ static void HttpServer_httpd_task(void *pvParameters) {
                 u16_t len;
                 netbuf_data(nb, &data, &len);
                 /* check for a GET request */
+                char uri[32];
+                char *uriStart, *uriEnd;
+                int methodLength;
                 if (!strncmp(data, "GET ", 4)) {
-                    char uri[32];
-                    char *uriStart, *uriEnd;
-                    /* extract URI */
-                    uriStart = data + 5;
-                    uriEnd = memchr(uriStart, ' ', MAX_URI_LEN);
-                    int len = uriEnd - uriStart;
-                    memcpy(uri, uriStart, len);
-                    uri[len] = '\0';
-                    printf("uri: %s\n", uri);
-                    // закидываем uri в парсер
-                    HttpServer_router(uri, buf);
+                    methodLength = 4;
+                } else if (!strncmp(data, "POST ", 5)) {
+                    methodLength = 5;
                 }
+                /* extract URI */
+                uriStart = data + methodLength + 1;
+                uriEnd = memchr(uriStart, ' ', MAX_URI_LEN);
+                int uriLen = uriEnd - uriStart;
+                memcpy(uri, uriStart, uriLen);
+                uri[uriLen] = '\0';
+                printf("uri: %s\n", uri);
+                // закидываем uri в парсер
+                HttpServer_router(uri, buf, uriEnd);
                 netconn_write(client, buf, strlen(buf), NETCONN_COPY);
                 netbuf_delete(nb);
             }
