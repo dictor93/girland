@@ -42,6 +42,9 @@ enum ActionType {
     kStatus,
     kRoot,
     kSettings,
+    kSettingsState,
+    kStyles,
+    kWifiSet,
     kOther,
 };
 
