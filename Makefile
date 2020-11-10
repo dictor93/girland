@@ -7,9 +7,9 @@ PROGRAM_INC_DIR = ./inc
 FLASH_SIZE = 4
 
 
-# SPIFFS_BASE_ADDR = 0x70000
-# SPIFFS_SIZE = 0x10000
+SPIFFS_BASE_ADDR = 0x70000
+SPIFFS_SIZE = 0x10000
 
-include ../../common.mk
+include /home/viktor/esp/esp-open-rtos/common.mk
 
-# $(eval $(call make_spiffs_image,files))
+$(eval $(call make_spiffs_image,files))
