@@ -42,7 +42,8 @@ static enum ActionType HttpServer_getRequestType(char *uri) {
 }
 
 static void HttpServer_router(char *uri, char *bufer, char *otherBody) {
-    printf("\n\nOther body:\n%s\n\n", otherBody);
+    char *bodyStart = strstr(otherBody, "\n\r\n")+3;
+
     enum ActionType l_type = HttpServer_getRequestType(uri);
     switch (l_type) {
     case kRoot:
@@ -58,7 +59,13 @@ static void HttpServer_router(char *uri, char *bufer, char *otherBody) {
         Fs_readFile("styles.css", bufer, PAGE_BUFFER_LENGTH);
         break;
     case kWifiSet:
-        Fs_readFile("settings.html", bufer, PAGE_BUFFER_LENGTH);
+        if (bodyStart) {
+            char *pwdRowStart = strstr(bodyStart, "PWD");
+            char *pwdRowEnd = strstr(pwdRowStart, "\n");
+            bodyStart[pwdRowEnd-pwdRowStart] = '\0';
+            Fs_writeFile("creds", bodyStart);
+        }
+        Fs_readFile("creds", bufer, PAGE_BUFFER_LENGTH);
         break;
     default:
         ModeConfig_setConfig(uri, l_type);
