@@ -44,6 +44,7 @@ enum ActionType {
     kTail,
     kStatus,
     kRoot,
+    kSettings,
     kOther,
 };
 
