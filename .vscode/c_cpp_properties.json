@@ -4,7 +4,8 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/home/viktor/esp/esp-open-rtos/**"
+                "/home/viktor/esp/esp-open-rtos/**",
+                "/home/viktor/esp/esp-open-sdk/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
