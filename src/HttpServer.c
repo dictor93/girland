@@ -27,8 +27,14 @@ static enum ActionType HttpServer_getRequestType(char *uri) {
         l_returnType = kMainColor;
     } else if (strstr(uri, "tail")) {
         l_returnType = kTail;
+    } else if (strstr(uri, "settingsstate")) {
+        l_returnType = kSettingsState;
     } else if (strstr(uri, "settings")) {
         l_returnType = kSettings;
+    } else if (strstr(uri, "styles.css")) {
+        l_returnType = kStyles;
+    } else if (strstr(uri, "wifiset")) {
+        l_returnType = kWifiSet;
     } else if (strlen(uri) < 3) {
         l_returnType = kRoot;
     }
@@ -41,7 +47,16 @@ static void HttpServer_router(char *uri, char *bufer) {
     case kRoot:
         Fs_readFile("mainpage.html", bufer, PAGE_BUFFER_LENGTH);
         break;
+    case kSettingsState:
+        Fs_readFile("creds", bufer, PAGE_BUFFER_LENGTH);
+        break;
     case kSettings:
+        Fs_readFile("settings.html", bufer, PAGE_BUFFER_LENGTH);
+        break;
+    case kStyles:
+        Fs_readFile("styles.css", bufer, PAGE_BUFFER_LENGTH);
+        break;
+    case kWifiSet:
         Fs_readFile("settings.html", bufer, PAGE_BUFFER_LENGTH);
         break;
     default:
@@ -95,8 +110,8 @@ static void HttpServer_httpd_task(void *pvParameters) {
                     printf("uri: %s\n", uri);
                     // закидываем uri в парсер
                     HttpServer_router(uri, buf);
-                    netconn_write(client, buf, strlen(buf), NETCONN_COPY);
                 }
+                netconn_write(client, buf, strlen(buf), NETCONN_COPY);
                 netbuf_delete(nb);
             }
             printf("Closing connection\n");
