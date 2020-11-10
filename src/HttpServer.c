@@ -1,15 +1,15 @@
-#include "FreeRTOS.h"
 #include "espressif/esp_common.h"
+#include "FreeRTOS.h"
 #include "queue.h"
+#include "string.h"
 #include "task.h"
 #include <lwip/api.h>
 #include "dhcpserver.h"
-#include "string.h"
 
-#include "HttpServer.h"
-#include "Fs.h"
-#include "ModeConfig.h"
 #include "Common.h"
+#include "Fs.h"
+#include "HttpServer.h"
+#include "ModeConfig.h"
 
 static enum ActionType HttpServer_getRequestType(char *uri) {
     enum ActionType l_returnType;
