@@ -4,6 +4,7 @@
 #include "task.h"
 #include <lwip/api.h>
 #include "dhcpserver.h"
+#include "string.h"
 
 #include "HttpServer.h"
 #include "Fs.h"
@@ -66,7 +67,7 @@ static void Config_setAlign(char *uri) {
 
 static void Config_setMainColor(char *uri) {
     char subBuff[4];
-    int colorStart = memchr(uri + 12, '/', MAX_URI_LEN) + 1;
+    char *colorStart = memchr(uri + 12, '/', MAX_URI_LEN) + 1;
     memcpy(subBuff, colorStart, 3);
     subBuff[3] = '\0';
     sscanf(subBuff, "%d", &s_currentData.currentHue);
@@ -75,15 +76,46 @@ static void Config_setMainColor(char *uri) {
 static void Config_setTail(char *uri) {
     char subBuff[4];
     if (strstr(uri, "COLOR")) {
-        int colorStart = memchr(uri + 8, '/', MAX_URI_LEN) + 1;
+        char *colorStart = memchr(uri + 8, '/', MAX_URI_LEN) + 1;
         memcpy(subBuff, colorStart, 3);
         subBuff[3] = '\0';
         sscanf(subBuff, "%d", &s_currentData.currentTailHue);
     } else if (strstr(uri, "LENGTH")) {
-        int colorStart = memchr(uri + 8, '/', MAX_URI_LEN) + 1;
+        char *colorStart = memchr(uri + 8, '/', MAX_URI_LEN) + 1;
         memcpy(subBuff, colorStart, 3);
         subBuff[3] = '\0';
         sscanf(subBuff, "%d", &s_currentData.currentTailLength);
+    }
+}
+
+static void Config_parceUri(char *uri, enum ActionType l_type) {
+    // получаем тип и в зависимости от него закидываем в соответсвующу функцию
+    // которая уже и устанавливает наш конфиг
+    printf("set mode");
+    switch (l_type) {
+    case kMode:
+        Config_setMode(uri);
+        break;
+    case kDirection:
+        Config_setDirection(uri);
+        break;
+    case kSpeed:
+        Config_setSpeed(uri);
+        break;
+    case kMirror:
+        Config_setMirror(uri);
+        break;
+    case kAlign:
+        Config_setAlign(uri);
+        break;
+    case kMainColor:
+        Config_setMainColor(uri);
+        break;
+    case kTail:
+        Config_setTail(uri);
+        break;
+    default:
+        break;
     }
 }
 
@@ -111,36 +143,27 @@ static enum ActionType Config_getType(char *uri) {
     return l_returnType;
 }
 
-static enum ActionType Config_parceUri(char *uri) {
-    // получаем тип и в зависимости от него закидываем в соответсвующу функцию
-    // которая уже и устанавливает наш конфиг
+static void HttpServer_router(char *uri, char *bufer) {
     enum ActionType l_type = Config_getType(uri);
     switch (l_type) {
-    case kMode:
-        Config_setMode(uri);
+    case kRoot:
+        Fs_readFile("mainpage.html", bufer, PAGE_BUFFER_LENGTH);
         break;
-    case kDirection:
-        Config_setDirection(uri);
-        break;
-    case kSpeed:
-        Config_setSpeed(uri);
-        break;
-    case kMirror:
-        Config_setMirror(uri);
-        break;
-    case kAlign:
-        Config_setAlign(uri);
-        break;
-    case kMainColor:
-        Config_setMainColor(uri);
-        break;
-    case kTail:
-        Config_setTail(uri);
+    case kSettings:
+        Fs_readFile("settings.html", bufer, PAGE_BUFFER_LENGTH);
         break;
     default:
+        Config_parceUri(uri, l_type);
+        snprintf(bufer, PAGE_BUFFER_LENGTH,
+                 "{\"m\":%d,\"fh\":%d,\"ch\":%d,\"th\":%d,"
+                 "\"tl\":%d}",
+                 s_currentData.currentMode, (int)xPortGetFreeHeapSize(),
+                 s_currentData.currentHue, s_currentData.currentTailHue,
+                 s_currentData.currentTailLength);
+        int pageLangth = strlen(bufer);
+        bufer[pageLangth] = '\0';
         break;
     }
-    return l_type;
 }
 
 static void HttpServer_httpd_task(void *pvParameters) {
@@ -178,28 +201,8 @@ static void HttpServer_httpd_task(void *pvParameters) {
                     uri[len] = '\0';
                     printf("uri: %s\n", uri);
                     // закидываем uri в парсер
-                    enum ActionType l_type = Config_parceUri(uri);
-                    switch (l_type) {
-                    case kRoot:
-                        Fs_readFile("mainpage", buf, PAGE_BUFFER_LENGTH);
-                        netconn_write(client, buf, strlen(buf), NETCONN_COPY);
-                        break;
-                    case kSettings:
-                        Fs_readFile("settings", buf, PAGE_BUFFER_LENGTH);
-                        netconn_write(client, buf, strlen(buf), NETCONN_COPY);
-                        break;
-                    default:
-                        snprintf(buf, sizeof(buf),
-                                 "{\"m\":%d,\"fh\":%d,\"ch\":%d,\"th\":%d,"
-                                 "\"tl\":%d}",
-                                 s_currentData.currentMode,
-                                 (int)xPortGetFreeHeapSize(),
-                                 s_currentData.currentHue,
-                                 s_currentData.currentTailHue,
-                                 s_currentData.currentTailLength);
-                        netconn_write(client, buf, strlen(buf), NETCONN_COPY);
-                        break;
-                    }
+                    HttpServer_router(uri, buf);
+                    netconn_write(client, buf, strlen(buf), NETCONN_COPY);
                 }
                 netbuf_delete(nb);
             }
