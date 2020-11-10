@@ -1,14 +1,16 @@
 #ifndef _INC_LOCAL_CONFIG_H_
 #define _INC_LOCAL_CONFIG_H_
 
-#include "Config.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+#include "Common.h"
+// Wifi credential
+#define SSID "Jesus"
+#define PWD "8715387153"
 
 #ifdef __cplusplus
-}  // extern "C" 
-#endif 
+} // extern "C"
+#endif
 
 #endif //_INC_LOCAL_CONFIG_H_
