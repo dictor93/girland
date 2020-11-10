@@ -1,0 +1,42 @@
+div.main {
+  font-family: Arial;
+  padding: 0.01em 16px;
+  box-shadow: 2px 2px 1px 1px #d2d2d2;
+  background-color: #f1f1f1;
+}
+
+#controls>div {
+  padding: 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+}
+
+@media screen and (max-device-width: 500px) {
+  html {
+      font-size: 50px;
+  }
+
+  html button {
+      font-size: 50px;
+      width: 400px;
+      /* height: 60px; */
+  }
+  
+}
+
+input[type="button"]{
+  color: #fff;
+  background-color: #007bff;
+  border-color: #007bff;
+  font-weight: 400;
+  text-align: center;
+  border: 1px solid transparent;
+  padding: .375rem .75rem;
+  margin:7px 12px 5px;
+  font-size: 1rem;
+  line-height: 1.5;
+  border-radius: .25rem;
+  transition: color .15s ease-in-out, background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+}
+input[type="button"]:hover{background-color: #0069d9;border-color: #0062cc;}
+input[type="button"]:active{background-color: #0062cc;border-color: #005cbf;}
+input[type="button"]:focus{background-color: #0069d9;border-color: #0062cc;box-shadow: 0 0 0 0.2rem rgba(38,143,255,.5)}
