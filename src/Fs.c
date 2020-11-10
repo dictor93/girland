@@ -30,8 +30,6 @@ void Fs_writeFile(char*name, uint8_t*file)
 {
     printf("Writing %s\n", file);
 
-    uint8_t buf[] = "Example data, written by ESP8266";
-
     int fd = open(name, O_WRONLY|O_CREAT, 0);
     if (fd < 0) {
         printf("Error opening file\n");
