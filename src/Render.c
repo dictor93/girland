@@ -14,6 +14,7 @@
 #include "Color.h"
 #include "Render.h"
 #include "LocalConfig.h"
+#include "ModeConfig.h"
 
 #define LED_NUMBER WIDTH * HEIGHT
 #define RENDER_FREQ 30
@@ -235,7 +236,7 @@ static void Render_shutdown(ws2812_pixel_t *pixels) {
 
 static void Render_render(int frame, ws2812_pixel_t *pixels) {
 
-    struct parserData_t *l_params = HttpServer_getCurrentParams();
+    struct parserData_t *l_params = ModeConfig_getCurrentParams();
 
     switch (l_params->currentMode) {
     case RAINBOW_MODE:

@@ -21,6 +21,7 @@
 #include "Wifi.h"
 #include "Render.h"
 #include "Fs.h"
+#include "ModeConfig.h"
 // void startAp() {
 //     sdk_wifi_set_opmode(SOFTAP_MODE);
 //     struct ip_info ap_ip;
@@ -139,7 +140,7 @@ void user_init(void) {
     // struct ip_info ipInfo;
     /* required to call wifi_set_opmode before station_set_config */
     // sdk_wifi_set_opmode(STATIONAP_MODE);
-
+    ModeConfig_init();
     Wifi_init();
     HttpServer_init();
     Render_init();

@@ -8,118 +8,10 @@
 
 #include "HttpServer.h"
 #include "Fs.h"
+#include "ModeConfig.h"
+#include "Common.h"
 
-struct parserData_t s_currentData;
-
-struct parserData_t *HttpServer_getCurrentParams() {
-    return &s_currentData;
-}
-
-static void Config_setMode(char *uri) {
-    if (strstr(uri, "RAINBOW")) {
-        s_currentData.currentMode = RAINBOW_MODE;
-    } else if (strstr(uri, "WAVE")) {
-        s_currentData.currentMode = WAVE_MODE;
-    } else if (strstr(uri, "TAPES")) {
-        s_currentData.currentMode = TAPES_MODE;
-    } else if (strstr(uri, "SNOW")) {
-        s_currentData.currentMode = SNOW_MODE;
-    } else if (strstr(uri, "TORNADO")) {
-        s_currentData.currentMode = TORNADO_MODE;
-    } else if (strstr(uri, "DISABLE")) {
-        s_currentData.currentMode = DISABLE_MODE;
-    }
-}
-
-static void Config_setDirection(char *uri) {
-    if (strstr(uri, "FORWARD")) {
-        s_currentData.currentDirection = FORWARD;
-    } else if (strstr(uri, "BACKWARD")) {
-        s_currentData.currentDirection = BACKWARD;
-    }
-}
-
-static void Config_setSpeed(char *uri) {
-    if (strstr(uri, "FAST")) {
-        s_currentData.currentSpeed = FAST;
-    } else if (strstr(uri, "MIDDLE")) {
-        s_currentData.currentSpeed = MIDDLE;
-    } else if (strstr(uri, "SLOW")) {
-        s_currentData.currentSpeed = SLOW;
-    }
-}
-
-static void Config_setMirror(char *uri) {
-    if (strstr(uri, "NOT_MIRROR")) {
-        s_currentData.currentMirror = NOT_MIRROR;
-    } else if (strstr(uri, "MIRROR")) {
-        s_currentData.currentMirror = MIRROR;
-    }
-}
-
-static void Config_setAlign(char *uri) {
-    if (strstr(uri, "VERTICAL")) {
-        s_currentData.rainbowAlign = IS_RAINBOW_VERTICAL;
-    } else if (strstr(uri, "HORISONTAL")) {
-        s_currentData.rainbowAlign = IS_RAINBOW_HORISONTAL;
-    }
-}
-
-static void Config_setMainColor(char *uri) {
-    char subBuff[4];
-    char *colorStart = memchr(uri + 12, '/', MAX_URI_LEN) + 1;
-    memcpy(subBuff, colorStart, 3);
-    subBuff[3] = '\0';
-    sscanf(subBuff, "%d", &s_currentData.currentHue);
-}
-
-static void Config_setTail(char *uri) {
-    char subBuff[4];
-    if (strstr(uri, "COLOR")) {
-        char *colorStart = memchr(uri + 8, '/', MAX_URI_LEN) + 1;
-        memcpy(subBuff, colorStart, 3);
-        subBuff[3] = '\0';
-        sscanf(subBuff, "%d", &s_currentData.currentTailHue);
-    } else if (strstr(uri, "LENGTH")) {
-        char *colorStart = memchr(uri + 8, '/', MAX_URI_LEN) + 1;
-        memcpy(subBuff, colorStart, 3);
-        subBuff[3] = '\0';
-        sscanf(subBuff, "%d", &s_currentData.currentTailLength);
-    }
-}
-
-static void Config_parceUri(char *uri, enum ActionType l_type) {
-    // получаем тип и в зависимости от него закидываем в соответсвующу функцию
-    // которая уже и устанавливает наш конфиг
-    printf("set mode");
-    switch (l_type) {
-    case kMode:
-        Config_setMode(uri);
-        break;
-    case kDirection:
-        Config_setDirection(uri);
-        break;
-    case kSpeed:
-        Config_setSpeed(uri);
-        break;
-    case kMirror:
-        Config_setMirror(uri);
-        break;
-    case kAlign:
-        Config_setAlign(uri);
-        break;
-    case kMainColor:
-        Config_setMainColor(uri);
-        break;
-    case kTail:
-        Config_setTail(uri);
-        break;
-    default:
-        break;
-    }
-}
-
-static enum ActionType Config_getType(char *uri) {
+static enum ActionType HttpServer_getRequestType(char *uri) {
     enum ActionType l_returnType;
     if (strstr(uri, "mode")) {
         l_returnType = kMode;
@@ -144,7 +36,7 @@ static enum ActionType Config_getType(char *uri) {
 }
 
 static void HttpServer_router(char *uri, char *bufer) {
-    enum ActionType l_type = Config_getType(uri);
+    enum ActionType l_type = HttpServer_getRequestType(uri);
     switch (l_type) {
     case kRoot:
         Fs_readFile("mainpage.html", bufer, PAGE_BUFFER_LENGTH);
@@ -153,13 +45,14 @@ static void HttpServer_router(char *uri, char *bufer) {
         Fs_readFile("settings.html", bufer, PAGE_BUFFER_LENGTH);
         break;
     default:
-        Config_parceUri(uri, l_type);
+        ModeConfig_setConfig(uri, l_type);
+        struct parserData_t *s_currentData = ModeConfig_getCurrentParams();
         snprintf(bufer, PAGE_BUFFER_LENGTH,
                  "{\"m\":%d,\"fh\":%d,\"ch\":%d,\"th\":%d,"
                  "\"tl\":%d}",
-                 s_currentData.currentMode, (int)xPortGetFreeHeapSize(),
-                 s_currentData.currentHue, s_currentData.currentTailHue,
-                 s_currentData.currentTailLength);
+                 s_currentData->currentMode, (int)xPortGetFreeHeapSize(),
+                 s_currentData->currentHue, s_currentData->currentTailHue,
+                 s_currentData->currentTailLength);
         int pageLangth = strlen(bufer);
         bufer[pageLangth] = '\0';
         break;
@@ -214,17 +107,5 @@ static void HttpServer_httpd_task(void *pvParameters) {
 }
 
 void HttpServer_init() {
-
-    s_currentData.currentHue = 196;
-    s_currentData.currentMode = RAINBOW_MODE;
-    s_currentData.currentSnowLife = DEFAULT_SNOW_LIFE;
-    s_currentData.currentSnowNumber = DEFAULT_SNOW_NUMBER;
-    s_currentData.currentSpeed = FAST;
-    s_currentData.currentTailHue = DEFAULT_TORNADO_TAIL_HUE;
-    s_currentData.currentTailLength = DEFAULT_TORNADO_TAIL_LENGTH;
-    s_currentData.currentDirection = FORWARD;
-    s_currentData.currentMirror = NOT_MIRROR;
-    s_currentData.rainbowAlign = IS_RAINBOW_VERTICAL;
-
     xTaskCreate(&HttpServer_httpd_task, "HTTP_DEAMON", 4096, NULL, 2, NULL);
 }
