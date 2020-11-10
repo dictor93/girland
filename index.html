@@ -28,7 +28,7 @@
             
         }
 
-        input[type=\"button\"]{
+        input[type="button"]{
             color: #fff;
             background-color: #007bff;
             border-color: #007bff;
@@ -42,9 +42,9 @@
             border-radius: .25rem;
             transition: color .15s ease-in-out, background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
         }
-        input[type=\"button\"]:hover{background-color: #0069d9;border-color: #0062cc;}
-        input[type=\"button\"]:active{background-color: #0062cc;border-color: #005cbf;}
-        input[type=\"button\"]:focus{background-color: #0069d9;border-color: #0062cc;box-shadow: 0 0 0 0.2rem rgba(38,143,255,.5)}
+        input[type="button"]:hover{background-color: #0069d9;border-color: #0062cc;}
+        input[type="button"]:active{background-color: #0062cc;border-color: #005cbf;}
+        input[type="button"]:focus{background-color: #0069d9;border-color: #0062cc;box-shadow: 0 0 0 0.2rem rgba(38,143,255,.5)}
     </style>
 </head>
 
@@ -58,7 +58,7 @@
 </body>
 
 <script>
-    const g = [
+    const formStructure = [
         {
             a: ['all'],
             n: 'Mode set',
@@ -188,6 +188,11 @@
                 
             ]
         },
+        {
+            a: ['all'],
+            n: 'Settings',
+            c: [{ n: 'SETTINGS', t: 'link', u: '/settings' }]
+        }
     ];
 
     function s(p) {
@@ -198,30 +203,35 @@
         document.getElementById('heap').innerText=state.fh;
         const root = document.getElementById('controls');
         root.innerHTML = '';
-        g.forEach((cg => {
+        formStructure.forEach((cg => {
             if (cg.a.includes(state.m) || cg.a.includes('all')) {
-                const gn = document.createElement('div');
-                gn.innerHTML = `<span>${cg.n}: </span><br/>`;
+                const container = document.createElement('div');
+                container.innerHTML = `<span>${cg.n}: </span><br/>`;
                 cg.c.forEach(c=>{
                     const e = document.createElement('input');
                     e.setAttribute('type', c.t);
                     if(c.t==='button') {
                         e.addEventListener('click', ()=>s(`${cg.p}/${c.n}`));
-                        gn.appendChild(e);
+                        container.appendChild(e);
                         e.setAttribute('value', c.n);
                     } else if(c.t==='range') {
                         const cr = document.createElement('div');
                         cr.appendChild(e);
                         cr.innerText=c.n;
-                        gn.appendChild(cr);
+                        container.appendChild(cr);
                         e.setAttribute('min', c.min);
                         e.setAttribute('max', c.max);
                         e.value = state[c.f];
                         e.addEventListener('input', (e)=>s(`${cg.p}/${c.n}/${String(e.target.value).padStart(3,0)}`));
+                    } else if(c.t==='link') {
+                        e.addEventListener('click', () => window.location=`${window.location.href}${c.u}`);
+                        container.appendChild(e);
+                        e.setAttribute('type', 'button');
+                        e.setAttribute('value', c.n);
                     }
-                    gn.appendChild(e);
+                    container.appendChild(e);
                 });
-                root.appendChild(gn);
+                root.appendChild(container);
             }
         }));
     };
