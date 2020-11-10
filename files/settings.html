@@ -23,17 +23,18 @@
   </div>
 </body>
 <script>
-  const form = document.getElementById("settings");
-  fetch('/settingsstate').then(resp => resp.text()).then(resp => {
+  const credsRespParser = resp => {
     resp.split('\n').forEach(row => {
-      row = row.split('=')
+      row = row.split('=');
       if(row[0] === 'SSID') {
-        form[0].value = row[1]
+        form[0].value = row[1];
       } else if (row[0] === 'PWD') {
-        form[1].value = row[1]
+        form[1].value = row[1];
       }
-    })
-  })
+    });
+  }
+  const form = document.getElementById("settings");
+  fetch('/settingsstate').then(resp => resp.text()).then(credsRespParser);
   document.getElementById("submit").addEventListener('click', () => {
     const data = `SSID=${form[0].value}
 PWD=${form[1].value}`
@@ -44,7 +45,7 @@ PWD=${form[1].value}`
         'Content-Type': 'application/json',
       },
       body: data,
-    });
+    }).then(resp => resp.text()).then(credsRespParser);
   }
   );
 </script>
