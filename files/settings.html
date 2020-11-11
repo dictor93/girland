@@ -21,8 +21,10 @@
       <input id="submit" type="button" value="Send">
       </form>
   </div>
+  <input id="resetWifi" type="button" value="Reset Wifi">
 </body>
 <script>
+  document.getElementById('resetWifi').addEventListener('click', () => fetch('rersetwifi'));
   const credsRespParser = resp => {
     resp.split('\n').forEach(row => {
       row = row.split('=');
