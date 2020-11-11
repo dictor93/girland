@@ -29,7 +29,6 @@ void Fs_readFile(char*name, char*extBuf, int buffLen)
 void Fs_writeFile(char*name, char*file)
 {
     remove(name);
-    printf("Writing %s\n", file);
 
     int fd = open(name, O_WRONLY|O_CREAT, 0);
     if (fd < 0) {
