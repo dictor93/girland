@@ -5,18 +5,20 @@
 #include "LocalConfig.h"
 #include "string.h"
 #include "Fs.h"
+#include "Wifi.h"
 
 bool s_isConnectionFault = false;
 
 static void Wifi_connect() {
-    sdk_wifi_set_opmode(STATION_MODE);
-    sdk_wifi_station_set_auto_connect(1);
+    
     // printf("SSID: %s, PWD: %s", config.ssid, config.password);
     Wifi_resetConfig();
 }
 
 void Wifi_resetConfig() {
     sdk_wifi_station_disconnect();
+    sdk_wifi_set_opmode(STATION_MODE);
+    sdk_wifi_station_set_auto_connect(1);
     char *credsBuffer[64];
     Fs_readFile("creds", credsBuffer, 64);
     char *pwd = strstr(credsBuffer, "PWD=")+4;
@@ -41,9 +43,32 @@ void Wifi_resetConfig() {
     sdk_wifi_station_connect();
 }
 
+static void Wifi_startAp() {
+    sdk_wifi_station_disconnect();
+    sdk_wifi_set_opmode(SOFTAP_MODE);
+    struct ip_info ap_ip;
+    IP4_ADDR(&ap_ip.ip, 192, 168, 0, 1);
+    IP4_ADDR(&ap_ip.gw, 0, 0, 0, 0);
+    IP4_ADDR(&ap_ip.netmask, 255, 255, 0, 0);
+    sdk_wifi_set_ip_info(1, &ap_ip);
+
+    struct sdk_softap_config ap_config = {
+        .ssid = AP_SSID,
+        .ssid_hidden = 0,
+        .channel = 3,
+        .ssid_len = strlen(AP_SSID),
+        .authmode = AUTH_WPA_WPA2_PSK,
+        .password = AP_PSK,
+        .max_connection = 3,
+        .beacon_interval = 100,
+    };
+    sdk_wifi_softap_set_config(&ap_config);
+}
+
 static void onConnFault() {
     s_isConnectionFault = true;
-    printf("Connection aborted\n");
+    Wifi_startAp();
+    printf("Connection aborted\nStarting AP");
 }
 
 static void Wifi_statusDecider(uint8_t status) {
@@ -82,11 +107,11 @@ static void Wifi_checkStatusTask(void *parameters) {
                 Wifi_statusDecider(l_stationStatus);
             }
         }
-        vTaskDelay(10000 / portTICK_PERIOD_MS);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 
 void Wifi_init() {
-    Wifi_connect();
+    Wifi_startAp();
     xTaskCreate(&Wifi_checkStatusTask, "main-task", 1024, NULL, 10, NULL);
 }
