@@ -9,12 +9,6 @@
 
 bool s_isConnectionFault = false;
 
-static void Wifi_connect() {
-    
-    // printf("SSID: %s, PWD: %s", config.ssid, config.password);
-    Wifi_resetConfig();
-}
-
 void Wifi_resetConfig() {
     sdk_wifi_station_disconnect();
     sdk_wifi_set_opmode(STATION_MODE);
@@ -111,6 +105,6 @@ static void Wifi_checkStatusTask(void *parameters) {
 }
 
 void Wifi_init() {
-    Wifi_startAp();
+    Wifi_resetConfig();
     xTaskCreate(&Wifi_checkStatusTask, "main-task", 1024, NULL, 10, NULL);
 }
