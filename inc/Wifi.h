@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 void Wifi_init();
+void Wifi_resetConfig();
 
 #ifdef __cplusplus
 }  // extern "C" 

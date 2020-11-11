@@ -11,6 +11,12 @@ bool s_isConnectionFault = false;
 static void Wifi_connect() {
     sdk_wifi_set_opmode(STATION_MODE);
     sdk_wifi_station_set_auto_connect(1);
+    // printf("SSID: %s, PWD: %s", config.ssid, config.password);
+    Wifi_resetConfig();
+}
+
+void Wifi_resetConfig() {
+    sdk_wifi_station_disconnect();
     char *credsBuffer[64];
     Fs_readFile("creds", credsBuffer, 64);
     char *pwd = strstr(credsBuffer, "PWD=")+4;
@@ -23,7 +29,6 @@ static void Wifi_connect() {
     }
     ssidEnd[0] = '\0';
 
-
     struct sdk_station_config config = {
         .ssid = malloc(strlen(ssid)),
         .password = malloc(strlen(pwd)),
@@ -33,7 +38,7 @@ static void Wifi_connect() {
     strcpy(config.password, pwd);
 
     sdk_wifi_station_set_config(&config);
-    // printf("SSID: %s, PWD: %s", config.ssid, config.password);
+    sdk_wifi_station_connect();
 }
 
 static void onConnFault() {
