@@ -5,6 +5,9 @@
 extern "C" {
 #endif
 
+#define AP_SSID "Girland"
+#define AP_PSK "12345678"
+
 void Wifi_init();
 void Wifi_resetConfig();
 
