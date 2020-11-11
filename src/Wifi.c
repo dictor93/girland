@@ -3,16 +3,35 @@
 #include "task.h"
 #include "queue.h"
 #include "LocalConfig.h"
+#include "string.h"
+#include "Fs.h"
 
 bool s_isConnectionFault = false;
 
 static void Wifi_connect() {
     sdk_wifi_set_opmode(STATION_MODE);
     sdk_wifi_station_set_auto_connect(1);
+    char *credsBuffer[64];
+    Fs_readFile("creds", credsBuffer, 64);
+    char *pwd = strstr(credsBuffer, "PWD=")+4;
+    char *pwdEnd = strstr(pwd, "\n");
+    char *ssid = strstr(credsBuffer, "SSID=")+5;
+    char *ssidEnd = strstr(ssid, "\n");
+
+    if(pwdEnd) {
+        pwdEnd[0] = '\0';
+    }
+    ssidEnd[0] = '\0';
+
+
     struct sdk_station_config config = {
-        .ssid = SSID,
-        .password = PWD,
+        .ssid = malloc(strlen(ssid)),
+        .password = malloc(strlen(pwd)),
     };
+
+    strcpy(config.ssid, ssid);
+    strcpy(config.password, pwd);
+
     sdk_wifi_station_set_config(&config);
     // printf("SSID: %s, PWD: %s", config.ssid, config.password);
 }
