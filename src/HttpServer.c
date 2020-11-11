@@ -62,7 +62,9 @@ static void HttpServer_router(char *uri, char *bufer, char *otherBody) {
         if (bodyStart) {
             char *pwdRowStart = strstr(bodyStart, "PWD");
             char *pwdRowEnd = strstr(pwdRowStart, "\n");
-            bodyStart[pwdRowEnd-pwdRowStart] = '\0';
+            if (pwdRowEnd) {
+                pwdRowEnd = '\0';
+            }
             Fs_writeFile("creds", bodyStart);
         }
         Fs_readFile("creds", bufer, PAGE_BUFFER_LENGTH);
