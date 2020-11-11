@@ -26,8 +26,9 @@ void Fs_readFile(char*name, char*extBuf, int buffLen)
     close(fd);
 }
 
-void Fs_writeFile(char*name, uint8_t*file)
+void Fs_writeFile(char*name, char*file)
 {
+    remove(name);
     printf("Writing %s\n", file);
 
     int fd = open(name, O_WRONLY|O_CREAT, 0);
@@ -35,8 +36,7 @@ void Fs_writeFile(char*name, uint8_t*file)
         printf("Error opening file\n");
         return;
     }
-
-
+    
     int written = write(fd, file, strlen(file));
     printf("Written %d bytes\n", written);
 
