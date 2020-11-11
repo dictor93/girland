@@ -136,18 +136,12 @@
 
 void user_init(void) {
     uart_set_baud(0, 115200);
+    Fs_init();
 
-    // struct ip_info ipInfo;
-    /* required to call wifi_set_opmode before station_set_config */
-    // sdk_wifi_set_opmode(STATIONAP_MODE);
     ModeConfig_init();
     Wifi_init();
     HttpServer_init();
     Render_init();
-
-    Fs_init();
-    
-    // Fs_getCreds();
 
     // chaekSettings();
 
