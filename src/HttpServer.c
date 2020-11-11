@@ -10,6 +10,7 @@
 #include "Fs.h"
 #include "HttpServer.h"
 #include "ModeConfig.h"
+#include "Wifi.h"
 
 static enum ActionType HttpServer_getRequestType(char *uri) {
     enum ActionType l_returnType;
@@ -35,6 +36,8 @@ static enum ActionType HttpServer_getRequestType(char *uri) {
         l_returnType = kStyles;
     } else if (strstr(uri, "wifiset")) {
         l_returnType = kWifiSet;
+    } else if (strstr(uri, "rersetwifi")) {
+        l_returnType = kResetWifi;
     } else if (strlen(uri) < 3) {
         l_returnType = kRoot;
     }
@@ -57,6 +60,9 @@ static void HttpServer_router(char *uri, char *bufer, char *otherBody) {
         break;
     case kStyles:
         Fs_readFile("styles.css", bufer, PAGE_BUFFER_LENGTH);
+        break;
+    case kResetWifi:
+        Wifi_resetConfig();
         break;
     case kWifiSet:
         if (bodyStart) {

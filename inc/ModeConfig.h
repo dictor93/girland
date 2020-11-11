@@ -45,6 +45,7 @@ enum ActionType {
     kSettingsState,
     kStyles,
     kWifiSet,
+    kResetWifi,
     kOther,
 };
 
