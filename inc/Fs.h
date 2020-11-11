@@ -1,5 +1,5 @@
-#ifndef _INC_WIFI_H_
-#define _INC_WIFI_H_
+#ifndef _INC_FS_H_
+#define _INC_FS_H_
 
 #ifdef __cplusplus
 extern "C" {
