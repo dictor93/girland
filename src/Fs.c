@@ -13,7 +13,7 @@
  *
  */
 
-void Fs_readFile(char*name, char*extBuf, int buffLen)
+int Fs_readFile(char*name, char*extBuf, int buffLen)
 {
     int fd = open(name, O_RDONLY);
     if (fd < 0) {
@@ -24,19 +24,18 @@ void Fs_readFile(char*name, char*extBuf, int buffLen)
     int read_bytes = read(fd, extBuf, buffLen);
     extBuf[read_bytes] = '\0';    // zero terminate string
     close(fd);
+    return read_bytes;
 }
 
-void Fs_writeFile(char*name, char*file)
+void Fs_writeFile(char*name, char*data, int size)
 {
-    remove(name);
-
     int fd = open(name, O_WRONLY|O_CREAT, 0);
     if (fd < 0) {
         printf("Error opening file\n");
         return;
     }
     
-    int written = write(fd, file, strlen(file));
+    int written = write(fd, data, size);
     printf("Written %d bytes\n", written);
 
     close(fd);
