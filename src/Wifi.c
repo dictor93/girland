@@ -10,11 +10,13 @@
 bool s_isConnectionFault = false;
 
 void Wifi_resetConfig() {
+    s_isConnectionFault = false;
     sdk_wifi_station_disconnect();
     sdk_wifi_set_opmode(STATION_MODE);
     sdk_wifi_station_set_auto_connect(1);
     char *credsBuffer[64];
-    Fs_readFile("creds", credsBuffer, 64);
+    int fileLength = Fs_readFile("creds", credsBuffer, 64);
+    credsBuffer[fileLength + 1] = '\0';
     char *pwd = strstr(credsBuffer, "PWD=")+4;
     char *pwdEnd = strstr(pwd, "\n");
     char *ssid = strstr(credsBuffer, "SSID=")+5;
