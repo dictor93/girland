@@ -71,9 +71,10 @@ static void HttpServer_router(char *uri, char *bufer, char *otherBody) {
             if (pwdRowEnd) {
                 pwdRowEnd = '\0';
             }
-            Fs_writeFile("creds", bodyStart);
+            Fs_writeFile("creds", bodyStart, strlen(bodyStart) + 1);
         }
-        Fs_readFile("creds", bufer, PAGE_BUFFER_LENGTH);
+        int fileLength = Fs_readFile("creds", bufer, PAGE_BUFFER_LENGTH);
+        bufer[fileLength + 1] = '\0';
         break;
     default:
         ModeConfig_setConfig(uri, l_type);
@@ -110,9 +111,10 @@ static void HttpServer_httpd_task(void *pvParameters) {
         if (err == ERR_OK) {
             struct netbuf *nb;
             if ((err = netconn_recv(client, &nb)) == ERR_OK) {
-                void *data;
+                char *data;
                 u16_t len;
                 netbuf_data(nb, &data, &len);
+                data[len + 0] = '\0';
                 /* check for a GET request */
                 char uri[32];
                 char *uriStart, *uriEnd;
