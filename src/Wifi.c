@@ -94,10 +94,9 @@ static void Wifi_statusDecider(uint8_t status) {
 }
 
 static void Wifi_checkStatusTask(void *parameters) {
-    uint8_t l_stationStatus = sdk_wifi_station_get_connect_status();
     while (1) {
         if (!s_isConnectionFault) {
-            l_stationStatus = sdk_wifi_station_get_connect_status();
+            uint8_t l_stationStatus = sdk_wifi_station_get_connect_status();
             if (l_stationStatus != STATION_GOT_IP) {
                 Wifi_statusDecider(l_stationStatus);
             }
