@@ -78,13 +78,13 @@ static void HttpServer_router(char *uri, char *bufer, char *otherBody) {
         break;
     default:
         ModeConfig_setConfig(uri, l_type);
-        struct parserData_t *s_currentData = ModeConfig_getCurrentParams();
+        struct parserData_t *l_currentData = ModeConfig_getCurrentParams();
         snprintf(bufer, PAGE_BUFFER_LENGTH,
                  "{\"m\":%d,\"fh\":%d,\"ch\":%d,\"th\":%d,"
                  "\"tl\":%d}",
-                 s_currentData->currentMode, (int)xPortGetFreeHeapSize(),
-                 s_currentData->currentHue, s_currentData->currentTailHue,
-                 s_currentData->currentTailLength);
+                 l_currentData->currentMode, (int)xPortGetFreeHeapSize(),
+                 l_currentData->currentHue, l_currentData->currentTailHue,
+                 l_currentData->currentTailLength);
         int pageLangth = strlen(bufer);
         bufer[pageLangth] = '\0';
         break;

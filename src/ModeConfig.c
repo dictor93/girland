@@ -3,7 +3,7 @@
 #include "string.h"
 #include "Common.h"
 
-struct parserData_t s_currentData;
+static struct parserData_t s_currentData;
 
 struct parserData_t *ModeConfig_getCurrentParams() {
     return &s_currentData;
