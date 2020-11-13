@@ -62,7 +62,7 @@ static void HttpServer_router(char *uri, char *bufer, char *otherBody) {
         Fs_readFile("styles.css", bufer, PAGE_BUFFER_LENGTH);
         break;
     case kResetWifi:
-        Wifi_resetConfig();
+        Wifi_connect();
         break;
     case kWifiSet:
         if (bodyStart) {
