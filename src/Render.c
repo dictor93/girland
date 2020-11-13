@@ -33,6 +33,12 @@
 #define SNOW_LIFE 30 * 2 // 5sec;
 #define SNOW_NUMBER 15
 
+int s_frame = 0;
+
+void Render_resetFrame() {
+    s_frame = 0;
+}
+
 static QueueHandle_t m_render_queue;
 
 static void revertOdd(hsv_t *rawData, ws2812_pixel_t *pixels) {
@@ -301,14 +307,12 @@ static void Render_loop(void *pvParameters) {
 
     memset(l_pixels, 0, sizeof(ws2812_pixel_t) * LED_NUMBER);
 
-    int l_frame = 0;
-
     while (1) {
         int index;
         if (xQueueReceive(m_render_queue, &index, portMAX_DELAY)) {
-            Render_render(l_frame, &l_pixels[0]);
+            Render_render(s_frame, &l_pixels[0]);
             ws2812_i2s_update(l_pixels, PIXEL_RGB);
-            l_frame++;
+            s_frame++;
         }
     }
 }
