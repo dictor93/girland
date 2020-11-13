@@ -8,8 +8,13 @@ extern "C" {
 #define AP_SSID "Girland"
 #define AP_PSK "12345678"
 
+enum Wifi_modes {
+  Wifi_modeSta,
+  Wifi_modeAp
+};
+
 void Wifi_init();
-void Wifi_resetConfig();
+void Wifi_connect();
 
 #ifdef __cplusplus
 }  // extern "C" 
