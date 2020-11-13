@@ -99,7 +99,7 @@ static void Render_generateWave(int frame, ws2812_pixel_t *pixels,
             } else {
                 l_data.v = 0;
             }
-            data[x * HEIGHT + l_locY] = l_data;
+            data[l_locX * HEIGHT + l_locY] = l_data;
         }
     }
     revertOdd(data, pixels);
