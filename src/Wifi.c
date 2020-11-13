@@ -9,7 +9,7 @@
 
 bool s_isConnectionFault = false;
 
-void Wifi_resetConfig() {
+void Wifi_connect() {
     s_isConnectionFault = false;
     sdk_wifi_station_disconnect();
     sdk_wifi_set_opmode(STATION_MODE);
@@ -37,9 +37,12 @@ void Wifi_resetConfig() {
 
     sdk_wifi_station_set_config(&config);
     sdk_wifi_station_connect();
+    int l_wifiMode = Wifi_modeSta;
+    Fs_writeFile("wifimode", &l_wifiMode, 1);
 }
 
 static void Wifi_startAp() {
+    sdk_wifi_station_set_auto_connect(0);
     sdk_wifi_station_disconnect();
     sdk_wifi_set_opmode(SOFTAP_MODE);
     struct ip_info ap_ip;
@@ -63,8 +66,10 @@ static void Wifi_startAp() {
 
 static void onConnFault() {
     s_isConnectionFault = true;
-    Wifi_startAp();
+    int l_wifiMode = Wifi_modeAp;
+    Fs_writeFile("wifimode", &l_wifiMode, 1);
     printf("Connection aborted\nStarting AP");
+    sdk_system_restart();
 }
 
 static void Wifi_statusDecider(uint8_t status) {
@@ -106,6 +111,13 @@ static void Wifi_checkStatusTask(void *parameters) {
 }
 
 void Wifi_init() {
-    Wifi_resetConfig();
+    int l_wifiMode;
+    Fs_readFile("wifimode", &l_wifiMode, 1);
+    printf("Current wifi mode: %d\n\n", l_wifiMode);
+    if (l_wifiMode == Wifi_modeAp) {
+        Wifi_startAp();
+    } else {
+        Wifi_connect();
+    }
     xTaskCreate(&Wifi_checkStatusTask, "main-task", 1024, NULL, 10, NULL);
 }
