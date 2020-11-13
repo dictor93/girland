@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+  <title>Matrix simulator</title>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <link rel='stylesheet' type='text/css' media='screen' href='main.css'>
+  <script src='main.js'></script>
+  <style>
+    div.matrix {
+      display: flex;
+      flex-direction: column;
+      flex-wrap: wrap;
+    }
+    span.pixel {
+      background-color: red;
+      text-align: center;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <div class="matrix" id="matrix"></div>
+</body>
+<script>
+  const width = 16
+  const height = 16
+  const pixelSize = 50
+  const container = document.getElementById('matrix')
+  container.style.height = height*pixelSize + 'px'
+  container.style.width = width*pixelSize + 'px'
+
+
+  const generateFlat = () => {
+    const flatArr = [];
+    for(let x = 0; x < width; x++) {
+      for(let y = 0; y < height; y++) {
+        flatArr[x * height + y] = `${x}:${y}`
+      }
+    }
+    return flatArr
+  }
+
+  const revertOdd = (arr) => {
+    const newArr = []
+    for (let x = 0; x < width; x++) {
+        let odd = x % 2
+        for (let y = 0; y < height; y++) {
+            let locY = !odd ? y : height - y - 1
+            newArr[y + x * height] = arr[locY + x * height]
+        }
+    }
+    return newArr
+  }
+
+  const generateWave = (mirror, direction) => {
+
+    const arr = new Array(width*height);
+    arr.fill(true)
+
+    console.log(arr)
+
+    for (let x = 0; x < width; x++) {
+        let locX = mirror ? x : width - x - 1;
+        for (let y = 0; y < height; y++) {
+            let locY = direction ? height - y - 1 : y;
+            let light = true;
+            if (((y) % height >= (x / 3 + 3)) &&
+                ((y) % height < (x / 3 + 6))) {
+            } else {
+              light = false
+            }
+            arr[x * height + locY] = light;
+        }
+    }
+    return arr
+}
+
+  const render = (arr) => {
+    container.innerHTML = ""
+    const arrToRender = revertOdd(arr)
+    for(let x = 0; x < width; x++) {
+      for(let y = 0; y < height; y++) {
+        const pixel = document.createElement('span')
+        pixel.style.height = pixelSize + 'px'
+        pixel.style.width = pixelSize + 'px'
+        if(arrToRender[x * height + y]) {
+          pixel.className = 'pixel'
+        }
+        // pixel.innerText = arr[x * height + y]
+        container.appendChild(pixel)
+      }
+    }
+  }
+  render(revertOdd(generateWave()))
+</script>
+</html>
