@@ -12,6 +12,7 @@ extern "C" {
 #define TAPES_MODE 2
 #define SNOW_MODE 3
 #define TORNADO_MODE 4
+#define MATRIX_MODE 5
 #define DISABLE_MODE -1
 
 #define FAST 10
