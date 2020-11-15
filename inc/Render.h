@@ -12,6 +12,11 @@ typedef struct snow_item {
     int y;
 } snow_item;
 
+typedef struct matrixModeState {
+    int col;
+    int age;
+} matrixModeState;
+
 void Render_init();
 
 //setings for the led matrix 
