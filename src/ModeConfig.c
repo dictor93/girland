@@ -20,6 +20,8 @@ void ModeConfig_setMode(char *uri) {
         s_currentData.currentMode = SNOW_MODE;
     } else if (strstr(uri, "TORNADO")) {
         s_currentData.currentMode = TORNADO_MODE;
+    }  else if (strstr(uri, "MATRIX")) {
+        s_currentData.currentMode = MATRIX_MODE;
     } else if (strstr(uri, "DISABLE")) {
         s_currentData.currentMode = DISABLE_MODE;
     }
@@ -114,7 +116,7 @@ void ModeConfig_setConfig(char *uri, enum ActionType l_type) {
 
 void ModeConfig_init() {
     s_currentData.currentHue = 196;
-    s_currentData.currentMode = RAINBOW_MODE;
+    s_currentData.currentMode = MATRIX_MODE;
     s_currentData.currentSnowLife = DEFAULT_SNOW_LIFE;
     s_currentData.currentSnowNumber = DEFAULT_SNOW_NUMBER;
     s_currentData.currentSpeed = FAST;
