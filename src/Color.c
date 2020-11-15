@@ -11,6 +11,9 @@ ws2812_pixel_t Color_hexToRGB(uint32_t hex) {
 }
 
 ws2812_pixel_t Color_hsv2rgb(hsv_t in) {
+    // if(in.v) {
+    //     in.v = 0.1;
+    // }
     double l_hh, l_p, l_q, l_t, l_ff;
     long l_i;
     ws2812_pixel_t l_out;
