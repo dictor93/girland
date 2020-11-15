@@ -39,6 +39,14 @@ void Render_resetFrame() {
     s_frame = 0;
 }
 
+static void Render_turnOfAllPixels(hsv_t *pixels) {
+    for (int x = 0; x < WIDTH; x++) {
+        for (int y = 0; y < HEIGHT; y++) {
+            pixels[x * HEIGHT + y].v = 0;
+        }
+    }
+}
+
 static QueueHandle_t m_render_queue;
 
 static void revertOdd(hsv_t *rawData, ws2812_pixel_t *pixels) {
@@ -50,7 +58,6 @@ static void revertOdd(hsv_t *rawData, ws2812_pixel_t *pixels) {
             pixels[y + x * HEIGHT] = Color_hsv2rgb(rawData[locY + x * HEIGHT]);
         }
     }
-    free(rawData);
 }
 
 static void Render_generateRainbow(int frame, ws2812_pixel_t *pixels,
@@ -84,7 +91,7 @@ static void Render_generateWave(int frame, ws2812_pixel_t *pixels,
                                 bool direction, int speed, bool mirror,
                                 int hue) {
 
-    hsv_t *data = (hsv_t*)malloc(WIDTH*HEIGHT*sizeof(hsv_t));
+    hsv_t data[HEIGHT*WIDTH];
 
     for (int x = 0; x < WIDTH; x++) {
         int l_locX = mirror ? x : WIDTH - x - 1;
@@ -111,7 +118,7 @@ static int m_phase = 0;
 static int m_speed = 0;
 static void Render_generateTapes(int frame, ws2812_pixel_t *pixels, int speed,
                                  int hue) {
-    hsv_t *data = (hsv_t*)malloc(WIDTH*HEIGHT*sizeof(hsv_t));
+    hsv_t data[HEIGHT*WIDTH];
     m_speed = speed;
     for (int x = 0; x < WIDTH; x++) {
         for (int y = 0; y < HEIGHT; y++) {
@@ -193,10 +200,58 @@ static void Render_generateSnow(ws2812_pixel_t *pixels, int hue) {
     }
 }
 
+static struct matrixModeState s_matrixItems[15];
+int ageDivider = 3;
+
+static void Render_generateMatrix(ws2812_pixel_t *pixels, int hue, int tailLength) {
+    hsv_t data[HEIGHT*WIDTH];
+    Render_turnOfAllPixels(data);
+    int l_emptyPos = -1;
+    for (int i = 0; i < 15; i++) {
+        if(s_matrixItems[i].age > 15*ageDivider + 4) {
+            l_emptyPos = i;
+            break;
+        }
+    }
+    if(l_emptyPos != -1) {
+        if((int)((uint32_t)random()) % 10 > 5) {
+            s_matrixItems[l_emptyPos].col = (int)((uint32_t)random()) % WIDTH;
+            s_matrixItems[l_emptyPos].age = 0;
+        }
+
+    }
+    for(int i = 0; i < 15; i++) {
+        hsv_t l_data;
+        l_data.h = hue;
+        l_data.s = 1;
+        l_data.v = 1;
+        int l_pixelPosition = (int)(s_matrixItems[i].age / ageDivider) + HEIGHT * s_matrixItems[i].col;
+
+        if(l_pixelPosition <= HEIGHT*WIDTH){
+            data[l_pixelPosition] = (l_data);
+            for (int j = 0; j <= tailLength/10; j++) {
+                hsv_t l_tailData;
+                l_tailData.h = hue;
+                l_tailData.s = 1;
+                l_tailData.v = 0.05;
+                int l_tailPosition = l_pixelPosition - j;
+                if(l_tailPosition <= HEIGHT*WIDTH && l_tailPosition >= 0) {
+                    data[l_tailPosition] = (l_tailData);
+                }
+            }
+        }
+        s_matrixItems[i].age++;
+    }
+
+    revertOdd(data, pixels);
+}
+
+
+
 static void Render_generateTornado(int frame, ws2812_pixel_t *pixels,
                                    int tailHue, int tailLength, int hue) {
 
-    hsv_t *data = (hsv_t*)malloc(WIDTH*HEIGHT*sizeof(hsv_t));
+    hsv_t data[HEIGHT*WIDTH];
 
     for (int x = 0; x < WIDTH; x++) {
         for (int y = 0; y < HEIGHT; y++) {
@@ -233,11 +288,7 @@ static void Render_generateTornado(int frame, ws2812_pixel_t *pixels,
 }
 
 static void Render_shutdown(ws2812_pixel_t *pixels) {
-    for (int x = 0; x < WIDTH; x++) {
-        for (int y = 0; y < HEIGHT; y++) {
-            pixels[x * HEIGHT + y] = Color_hexToRGB(0x000000);
-        }
-    }
+    Render_turnOfAllPixels(pixels);
 }
 
 static void Render_render(int frame, ws2812_pixel_t *pixels) {
@@ -287,6 +338,9 @@ static void Render_render(int frame, ws2812_pixel_t *pixels) {
     case DISABLE_MODE:
         Render_shutdown(pixels);
         break;
+    case MATRIX_MODE:
+        Render_generateMatrix(pixels, l_params->currentHue, l_params->currentTailHue);
+        break;
     default:
         Render_generateRainbow(
             frame,
@@ -323,6 +377,10 @@ static void Render_timerINterruptHandler(void *arg) {
 }
 
 void Render_init() {
+    for (int i = 0; i < 15; i++) {
+        s_matrixItems[i].age = 20;
+        s_matrixItems[i].col = 20;
+    }
     timer_set_interrupts(FRC1, false);
     timer_set_run(FRC1, false);
     _xt_isr_attach(INUM_TIMER_FRC1, Render_timerINterruptHandler, NULL);
