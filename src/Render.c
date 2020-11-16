@@ -228,7 +228,7 @@ static void Render_generateMatrix(ws2812_pixel_t *pixels, int hue, int tailLengt
     Render_fillBlack(data);
     int l_emptyPos = -1;
     for (int i = 0; i < MATRIX_MAX_COUNT; i++) {
-        if(s_matrixItems[i].age > (HEIGHT - 1)*s_ageDivider + 4) {
+        if(s_matrixItems[i].age > (HEIGHT - 1)*s_ageDivider + s_matrixItems[i].tail) {
             l_emptyPos = i;
             break;
         }
@@ -237,6 +237,7 @@ static void Render_generateMatrix(ws2812_pixel_t *pixels, int hue, int tailLengt
         if((int)((uint32_t)random()) % 10 > 5) {
             s_matrixItems[l_emptyPos].col = (int)((uint32_t)random()) % WIDTH;
             s_matrixItems[l_emptyPos].age = 0;
+            s_matrixItems[l_emptyPos].tail = (int)((uint32_t)random()) % (HEIGHT/2) + 2;
         }
 
     }
@@ -252,7 +253,7 @@ static void Render_generateMatrix(ws2812_pixel_t *pixels, int hue, int tailLengt
             if(l_pixelPosition < HEIGHT && l_pixelPosition >= 0){
                 data[s_matrixItems[i].col][l_pixelPosition] = (l_data);
             }
-            for (int j = 1; j <= tailLength/10; j++) {
+            for (int j = 1; j <= s_matrixItems[i].tail; j++) {
                 hsv_t l_tailData;
                 l_tailData.h = hue;
                 l_tailData.s = 1;
