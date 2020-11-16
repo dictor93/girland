@@ -15,6 +15,7 @@ typedef struct snow_item {
 typedef struct matrixModeState {
     int col;
     int age;
+    int tail;
 } matrixModeState;
 
 void Render_init();
