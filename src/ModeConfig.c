@@ -22,6 +22,7 @@ void ModeConfig_setMode(char *uri) {
         s_currentData.currentMode = TORNADO_MODE;
     }  else if (strstr(uri, "MATRIX")) {
         s_currentData.currentMode = MATRIX_MODE;
+        s_currentData.currentHue = 116;
     } else if (strstr(uri, "DISABLE")) {
         s_currentData.currentMode = DISABLE_MODE;
     }
