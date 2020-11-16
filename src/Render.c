@@ -39,10 +39,18 @@ void Render_resetFrame() {
     s_frame = 0;
 }
 
-static void Render_turnOfAllPixels(hsv_t *pixels) {
+static void Render_fillBlack(hsv_t pixels[WIDTH][HEIGHT]) {
     for (int x = 0; x < WIDTH; x++) {
         for (int y = 0; y < HEIGHT; y++) {
-            pixels[x * HEIGHT + y].v = 0;
+            pixels[x][y].v = 0;
+        }
+    }
+}
+
+static void Render_flatArray(hsv_t src[WIDTH][HEIGHT], hsv_t *flated) {
+    for (int x = 0; x < WIDTH; x++) {
+        for (int y = 0; y < HEIGHT; y++) {
+            flated[y + HEIGHT * x] = src[x][y];
         }
     }
 }
@@ -56,6 +64,17 @@ static void revertOdd(hsv_t *rawData, ws2812_pixel_t *pixels) {
         for (int y = 0; y < HEIGHT; y++) {
             int locY = !odd ? y : HEIGHT - y - 1;
             pixels[y + x * HEIGHT] = Color_hsv2rgb(rawData[locY + x * HEIGHT]);
+        }
+    }
+}
+
+static void Render_revertOdd(hsv_t rawData[WIDTH][HEIGHT], ws2812_pixel_t *pixels) {
+
+    for (int x = 0; x < WIDTH; x++) {
+        bool odd = x % 2;
+        for (int y = 0; y < HEIGHT; y++) {
+            int locY = !odd ? y : HEIGHT - y - 1;
+            pixels[y + x * HEIGHT] = Color_hsv2rgb(rawData[x][locY]);
         }
     }
 }
@@ -200,15 +219,16 @@ static void Render_generateSnow(ws2812_pixel_t *pixels, int hue) {
     }
 }
 
-static struct matrixModeState s_matrixItems[15];
-int ageDivider = 3;
+int s_ageDivider = 3;
+#define MATRIX_MAX_COUNT 10
+static struct matrixModeState s_matrixItems[MATRIX_MAX_COUNT];
 
 static void Render_generateMatrix(ws2812_pixel_t *pixels, int hue, int tailLength) {
-    hsv_t data[HEIGHT*WIDTH];
-    Render_turnOfAllPixels(data);
+    hsv_t data[WIDTH][HEIGHT];
+    Render_fillBlack(data);
     int l_emptyPos = -1;
-    for (int i = 0; i < 15; i++) {
-        if(s_matrixItems[i].age > 15*ageDivider + 4) {
+    for (int i = 0; i < MATRIX_MAX_COUNT; i++) {
+        if(s_matrixItems[i].age > (HEIGHT - 1)*s_ageDivider + 4) {
             l_emptyPos = i;
             break;
         }
@@ -220,30 +240,32 @@ static void Render_generateMatrix(ws2812_pixel_t *pixels, int hue, int tailLengt
         }
 
     }
-    for(int i = 0; i < 15; i++) {
+    for(int i = 0; i < MATRIX_MAX_COUNT; i++) {
         hsv_t l_data;
         l_data.h = hue;
         l_data.s = 1;
         l_data.v = 1;
-        int l_pixelPosition = (int)(s_matrixItems[i].age / ageDivider) + HEIGHT * s_matrixItems[i].col;
+        int l_pixelPosition = HEIGHT - 1 - (int)(s_matrixItems[i].age / s_ageDivider);
 
-        if(l_pixelPosition <= HEIGHT*WIDTH){
-            data[l_pixelPosition] = (l_data);
-            for (int j = 0; j <= tailLength/10; j++) {
+        if(s_matrixItems[i].col >= 0 && s_matrixItems[i].col < WIDTH) {
+            
+            if(l_pixelPosition < HEIGHT && l_pixelPosition >= 0){
+                data[s_matrixItems[i].col][l_pixelPosition] = (l_data);
+            }
+            for (int j = 1; j <= tailLength/10; j++) {
                 hsv_t l_tailData;
                 l_tailData.h = hue;
                 l_tailData.s = 1;
                 l_tailData.v = 0.05;
-                int l_tailPosition = l_pixelPosition - j;
-                if(l_tailPosition <= HEIGHT*WIDTH && l_tailPosition >= 0) {
-                    data[l_tailPosition] = (l_tailData);
+                int l_tailPosition = l_pixelPosition + j;
+                if(l_tailPosition < HEIGHT && l_tailPosition >= 0) {
+                    data[s_matrixItems[i].col][l_tailPosition] = l_tailData;
                 }
             }
         }
         s_matrixItems[i].age++;
     }
-
-    revertOdd(data, pixels);
+    Render_revertOdd(data, pixels);
 }
 
 
@@ -288,7 +310,9 @@ static void Render_generateTornado(int frame, ws2812_pixel_t *pixels,
 }
 
 static void Render_shutdown(ws2812_pixel_t *pixels) {
-    Render_turnOfAllPixels(pixels);
+    hsv_t data[WIDTH][HEIGHT];
+    Render_fillBlack(data);
+    Render_revertOdd(data, pixels);
 }
 
 static void Render_render(int frame, ws2812_pixel_t *pixels) {
@@ -339,7 +363,7 @@ static void Render_render(int frame, ws2812_pixel_t *pixels) {
         Render_shutdown(pixels);
         break;
     case MATRIX_MODE:
-        Render_generateMatrix(pixels, l_params->currentHue, l_params->currentTailHue);
+        Render_generateMatrix(pixels, l_params->currentHue, l_params->currentTailLength);
         break;
     default:
         Render_generateRainbow(
@@ -377,9 +401,9 @@ static void Render_timerINterruptHandler(void *arg) {
 }
 
 void Render_init() {
-    for (int i = 0; i < 15; i++) {
-        s_matrixItems[i].age = 20;
-        s_matrixItems[i].col = 20;
+    for (int i = 0; i < MATRIX_MAX_COUNT; i++) {
+        s_matrixItems[i].age = 200;
+        s_matrixItems[i].col = 0;
     }
     timer_set_interrupts(FRC1, false);
     timer_set_run(FRC1, false);
