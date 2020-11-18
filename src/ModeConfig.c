@@ -2,6 +2,7 @@
 #include "espressif/esp_common.h"
 #include "string.h"
 #include "Common.h"
+#include "Render.h"
 
 static struct parserData_t s_currentData;
 
@@ -28,6 +29,7 @@ void ModeConfig_setMode(char *uri) {
     } else if (strstr(uri, "DISABLE")) {
         s_currentData.currentMode = DISABLE_MODE;
     }
+    Render_changeRenderHandler();
 }
 
 static void ModeConfig_setDirection(char *uri) {
@@ -119,7 +121,7 @@ void ModeConfig_setConfig(char *uri, enum ActionType l_type) {
 
 void ModeConfig_init() {
     s_currentData.currentHue = 196;
-    s_currentData.currentMode = VAGINE_MODE;
+    s_currentData.currentMode = RAINBOW_MODE;
     s_currentData.currentSnowLife = DEFAULT_SNOW_LIFE;
     s_currentData.currentSnowNumber = DEFAULT_SNOW_NUMBER;
     s_currentData.currentSpeed = FAST;

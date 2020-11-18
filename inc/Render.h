@@ -18,6 +18,7 @@ typedef struct matrixModeState {
     int tail;
 } matrixModeState;
 
+void Render_changeRenderHandler();
 void Render_init();
 
 //setings for the led matrix 
